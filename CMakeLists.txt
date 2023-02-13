@@ -1,38 +1,59 @@
-project(gflip2d)
 cmake_minimum_required(VERSION 3.18)
-find_package(CUDA REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(GLUT REQUIRED)
-set(CMAKE_BUILD_TYPE Release)
-set(CUDA_NVCC_FLAGS
-    ${CUDA_NVCC_FLAGS};
-    -gencode arch=compute_61,code=sm_61)
-#add_definitions(-DREAL_TYPE_FP32)
-include_directories(
-    src
-    )
-cuda_add_executable(
-    ${PROJECT_NAME}
-      src/DelaunayChecker.cpp
-      src/HashTable.cpp
-      src/RandGen.cpp
-      src/InputCreator.cpp
-      src/gDel2D/CPU/PredWrapper.cpp
-      src/gDel2D/CPU/predicates.cpp
-      src/Main.cpp
-      src/json.hpp
-      src/gDel2D/GPU/GpuDelaunay.cu
-      src/gDel2D/GPU/ThrustWrapper.cu
-      src/gDel2D/GPU/KerPredicates.cu
-      src/gDel2D/GPU/KerDivision.cu
-      src/gDel2D/GPU/SmallCounters.cu)
-set(CMAKE_VERBOSE_MAKEFILE "ON")
-target_link_libraries(${PROJECT_NAME} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${GLUT_LIBRARIES})
+project(gdel2d_edit)
 
-#include "GL/glew.h"
-#
-#include "gDel2D/GpuDelaunay.h"
-#include "RandGen.h"
-#include "HashTable.h"
+find_package(CUDA REQUIRED)
+
+find_package(yaml-cpp REQUIRED)
+
+find_package(PCL 1.12 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+# change your arch=<> and code=<> according to your gpu type
+set(CUDA_NVCC_FLAGS
+        ${CUDA_NVCC_FLAGS};
+        -gencode arch=compute_61,code=sm_61)
+
+set(${PROJECT_NAME}_SOURCES
+        src/DelaunayChecker.cpp
+        src/HashTable.cpp
+        src/RandGen.cpp
+        src/InputCreator.cpp
+        src/CPU/PredWrapper.cpp
+        src/CPU/predicates.cpp
+        src/GPU/GpuDelaunay.cu
+        src/GPU/ThrustWrapper.cu
+        src/GPU/KerPredicates.cu
+        src/GPU/KerDivision.cu
+        src/GPU/SmallCounters.cu
+        src/TriangulationHandler.cpp)
+
+set(${PROJECT_NAME}_HEADERS
+        inc/CommonTypes.h
+        inc/DelaunayChecker.h
+        inc/HashTable.h
+        inc/InputCreator.h
+        inc/json.h
+        inc/PerfTimer.h
+        inc/RandGen.h
+        inc/CPU/PredWrapper.h
+        inc/GPU/GpuDelaunay.h
+        inc/GPU/CudaWrapper.h
+        inc/GPU/DPredWrapper.h
+        inc/GPU/KerPredWrapper.h
+        inc/GPU/HostToKernel.h
+        inc/GPU/KerCommon.h
+        inc/GPU/KerDivision.h
+        inc/GPU/KerPredicates.h
+        inc/GPU/KerShewchuk.h
+        inc/GPU/MemoryManager.h
+        inc/GPU/SmallCounters.h
+        inc/GPU/ThrustWrapper.h
+        inc/TriangulationHandler.h
+        inc/PointType.h)
+
+cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
+set(CMAKE_VERBOSE_MAKEFILE "ON")
+target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} yaml-cpp)
 

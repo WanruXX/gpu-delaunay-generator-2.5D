@@ -31,10 +31,11 @@
 *.out
 *.app
 
-*.txt
+*_*.txt
 *.cst
 *.csv
 *.pcd
 *.geojson
 *build*/
 *results*/
+*test*/

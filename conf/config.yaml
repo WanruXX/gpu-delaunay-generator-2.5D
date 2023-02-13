@@ -1,0 +1,51 @@
+#-------------------------------------------------------------------------------#
+# The coordinate of the initial map origin point in UTM
+MapOriginInUTM:
+  X: 650900
+  Y: 6561500
+  Z: 42
+#-------------------------------------------------------------------------------#
+# Number of the times of running
+RunNum: 1
+
+#-------------------------------------------------------------------------------#
+# Choose the source of points
+#-------------------------------------------------------------------------------#
+InputFromFile: true
+#---------------------------------------------------#
+# if InputFromFile
+InputPointCloudFile: "/home/wxxs6p/repo/gDel2D-edition/test1/Fede_left_4_fromtxt.pcd"
+InputConstraintFile: ""
+#---------------------------------------------------#
+# if NOT InputFromFile
+PointNum: 1000
+# Choose among {"Uniform", "Gaussian", "Disk", "ThinCircle", "Circle", "Grid", "Ellipse", "TwoLines"}
+DistributionType: "Uniform"
+# Number of constraints
+ConstraintNum: -1
+# Initial seed
+Seed: 76213898
+# Save randomly generated points
+SaveToFile: false
+SavePath: ""
+#-------------------------------------------------------------------------------#
+
+# Insert all before flipping
+InsertAll: false
+
+# Sort input points
+NoSortPoint: false
+
+# Reorder the triangle before flipping
+NoReorder: false
+
+# Level of code profiling, choose among {"Default", "Detail", "Diag", "Debug"}
+ProfLevel: "Default"
+
+# Check Euler, orientation, etc.
+DoCheck: false
+
+# Output check/triangulation result
+OutputResult: false
+OutputCheckResult: "/home/wxxs6p/repo/gDel2D-edition/test1/statistics.csv"
+OutputMeshPath: "/home/wxxs6p/repo/gDel2D-edition/test1/Fede_left_4_tri.geojson"
