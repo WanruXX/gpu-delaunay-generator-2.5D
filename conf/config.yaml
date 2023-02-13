@@ -1,10 +1,4 @@
 #-------------------------------------------------------------------------------#
-# The coordinate of the initial map origin point in UTM
-MapOriginInUTM:
-  X: 650900
-  Y: 6561500
-  Z: 42
-#-------------------------------------------------------------------------------#
 # Number of the times of running
 RunNum: 1
 
@@ -47,5 +41,10 @@ DoCheck: false
 
 # Output check/triangulation result
 OutputResult: false
+# The coordinate of the initial origin point in UTM, if it's originally in UTM then {0,0,0}
+MapOriginInUTM:
+  X: 650900
+  Y: 6561500
+  Z: 42
 OutputCheckResult: "/home/wxxs6p/repo/gDel2D-edition/test1/statistics.csv"
 OutputMeshPath: "/home/wxxs6p/repo/gDel2D-edition/test1/Fede_left_4_tri.geojson"

@@ -1,6 +1,10 @@
 #ifndef GDEL2D_EDIT_POINTTYPE_H
 #define GDEL2D_EDIT_POINTTYPE_H
 
+//#define DISABLE_PCL_INPUT
+
+#ifndef DISABLE_PCL_INPUT
+
 #ifndef PCL_NO_PRECOMPILE
 #define PCL_NO_PRECOMPILE
 #endif
@@ -51,4 +55,5 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
         scanchannel,
         scanchannel)(double, classflags, classflags)(double, red, red)(double, green, green)(double, blue, blue))
 
+#endif
 #endif //GDEL2D_EDIT_POINTTYPE_H
