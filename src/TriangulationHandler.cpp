@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
-TriangulationHandler::TriangulationHandler(const char *InputYAMLFile) : InputPC(new pcl::PointCloud<POINT_TYPE>)
+TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
 {
     YAML::Node Config = YAML::LoadFile(InputYAMLFile);
 
@@ -121,7 +121,11 @@ void TriangulationHandler::run()
         // 1. Create points
         auto         timer = (double)clock();
         InputCreator creator;
-        creator.createPoints(PtCreatorPara, InputPC, _input.InputPointVec, _input.InputConstraintVec);
+#ifndef DISABLE_PCL_INPUT
+        creator.createPoints(PtCreatorPara, InputPointCloud, _input.InputPointVec, _input.InputConstraintVec);
+#else
+        creator.createPoints(PtCreatorPara, _input.InputPointVec, _input.InputConstraintVec);
+#endif
         std::cout << "Point reading time: " << ((double)clock() - timer) / CLOCKS_PER_SEC << std::endl;
         // 2. Compute Delaunay triangulation
         timer = (double)clock();
@@ -218,15 +222,24 @@ void TriangulationHandler::saveResultsToFile() const
             for (auto &tri : _output.triVec)
             {
                 nlohmann::json Coor = nlohmann::json::array();
-                Coor.push_back({static_cast<double>((*InputPC)[tri._v[0]].x) + InitX,
-                                static_cast<double>((*InputPC)[tri._v[0]].y) + InitY,
-                                static_cast<double>((*InputPC)[tri._v[0]].z) + InitZ});
-                Coor.push_back({static_cast<double>((*InputPC)[tri._v[1]].x) + InitX,
-                                static_cast<double>((*InputPC)[tri._v[1]].y) + InitY,
-                                static_cast<double>((*InputPC)[tri._v[1]].z) + InitZ});
-                Coor.push_back({static_cast<double>((*InputPC)[tri._v[2]].x) + InitX,
-                                static_cast<double>((*InputPC)[tri._v[2]].y) + InitY,
-                                static_cast<double>((*InputPC)[tri._v[2]].z) + InitZ});
+#ifndef DISABLE_PCL_INPUT
+                Coor.push_back({static_cast<double>(InputPointCloud[tri._v[0]].x) + InitX,
+                                static_cast<double>(InputPointCloud[tri._v[0]].y) + InitY,
+                                static_cast<double>(InputPointCloud[tri._v[0]].z) + InitZ});
+                Coor.push_back({static_cast<double>(InputPointCloud[tri._v[1]].x) + InitX,
+                                static_cast<double>(InputPointCloud[tri._v[1]].y) + InitY,
+                                static_cast<double>(InputPointCloud[tri._v[1]].z) + InitZ});
+                Coor.push_back({static_cast<double>(InputPointCloud[tri._v[2]].x) + InitX,
+                                static_cast<double>(InputPointCloud[tri._v[2]].y) + InitY,
+                                static_cast<double>(InputPointCloud[tri._v[2]].z) + InitZ});
+#else
+                Coor.push_back({static_cast<double>(_input.InputPointVec[tri._v[0]]._p[0]) + InitX,
+                                static_cast<double>(_input.InputPointVec[tri._v[0]]._p[1]) + InitY});
+                Coor.push_back({static_cast<double>(_input.InputPointVec[tri._v[1]]._p[0]) + InitX,
+                                static_cast<double>(_input.InputPointVec[tri._v[1]]._p[1]) + InitY});
+                Coor.push_back({static_cast<double>(_input.InputPointVec[tri._v[2]]._p[0]) + InitX,
+                                static_cast<double>(_input.InputPointVec[tri._v[2]]._p[1]) + InitY});
+#endif
                 nlohmann::json CoorWrapper = nlohmann::json::array();
                 CoorWrapper.push_back(Coor);
                 nlohmann::json TriangleObject;

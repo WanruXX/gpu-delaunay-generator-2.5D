@@ -1,9 +1,18 @@
 #ifndef GDEL2D_GPUDELAUNAYC_H
 #define GDEL2D_GPUDELAUNAYC_H
 
+#ifndef DISABLE_PCL_INPUT
+#ifndef PCL_NO_PRECOMPILE
+#define PCL_NO_PRECOMPILE
+#endif
+
+#include "../PointType.h"
+#include <pcl/point_cloud.h>
+#endif
+
+#include <array>
 #include <iomanip>
 #include <iostream>
-#include <array>
 
 #include "../CommonTypes.h"
 #include "../PerfTimer.h"
@@ -28,16 +37,16 @@ constexpr int PredThreadsPerBlock = 32;
 
 struct GDel2DOutput
 {
-    TriHVec     triVec;
-    TriOppHVec  triOppVec;
+    TriHVec           triVec;
+    TriOppHVec        triOppVec;
     std::set<Segment> segVec;
-    Point2      ptInfty;
-    Statistics  stats;
+    Point2            ptInfty;
+    Statistics        stats;
 };
 
 struct GDel2DInput
 {
-    Point2HVec  InputPointVec;
+    Point2HVec InputPointVec;
     SegmentHVec InputConstraintVec;
 
     bool      insAll    = false; // Insert all before flipping
@@ -57,22 +66,22 @@ struct GDel2DInput
 // Main class
 ////
 
-constexpr int TriSegNum    = 3;
+constexpr int TriSegNum            = 3;
 constexpr int TriSeg[TriSegNum][2] = {{0, 1}, {1, 2}, {2, 0}};
 
 class GpuDel
 {
   private:
-    const GDel2DInput *_input = nullptr;
+    const GDel2DInput *_input  = nullptr;
     GDel2DOutput      *_output = nullptr;
 
     // Input
     Point2DVec  _pointVec;
     SegmentDVec _constraintVec;
     int         _pointNum = 0;
-    int         _triMax = 0;
-    double      _minVal = 0;
-    double      _maxVal = 0;
+    int         _triMax   = 0;
+    double      _minVal   = 0;
+    double      _maxVal   = 0;
 
     // Output - Size proportional to triNum
     TriDVec    _triVec;
@@ -80,9 +89,9 @@ class GpuDel
     CharDVec   _triInfoVec;
 
     // State
-    bool       _doFlipping =false;
+    bool       _doFlipping = false;
     ActTriMode _actTriMode = ActTriMarkCompact;
-    int        _insNum = 0;
+    int        _insNum     = 0;
 
     // Supplemental arrays - Size proportional to triNum
     IntDVec  _actTriVec;
@@ -101,7 +110,7 @@ class GpuDel
     IntHVec       _orgFlipNum;
     SmallCounters _counters;
     Point2        _ptInfty;
-    int           _infIdx = 0;
+    int           _infIdx     = 0;
     int           _availPtNum = 0;
     DPredWrapper  _dPredWrapper;
 

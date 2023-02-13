@@ -1,10 +1,11 @@
 #include "../inc/InputCreator.h"
-#include "../inc/PointType.h"
 #include <cmath>
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_cloud.h>
-#include <pcl/PointIndices.h>
+
+#ifndef DISABLE_PCL_INPUT
 #include <pcl/filters/extract_indices.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/PointIndices.h>
+#endif
 
 void InputCreator::randCirclePoint(double &x, double &y)
 {
@@ -13,115 +14,67 @@ void InputCreator::randCirclePoint(double &x, double &y)
     y        = 0.45 * sin(a);
 }
 
-void InputCreator::createPoints(const InputCreatorPara &InputPara, Point2HVec &pointVec, SegmentHVec &constraintVec)
+#ifndef DISABLE_PCL_INPUT
+void InputCreator::createPoints(const InputCreatorPara      &InputPara,
+                                pcl::PointCloud<POINT_TYPE> &InputPointCloud,
+                                Point2HVec                  &InputPointVec,
+                                SegmentHVec                 &InputConstraintVec)
+#else
+void InputCreator::createPoints(const InputCreatorPara &InputPara,
+                                Point2HVec             &InputPointVec,
+                                SegmentHVec            &InputConstraintVec)
+#endif
 {
     if (InputPara._inFile)
     {
         readPoints(InputPara._inFilename);
+#ifndef DISABLE_PCL_INPUT
+        const auto InputPtNum = inPointCloud->size();
+#else
+        const auto InputPtNum = inPointVec.size();
+#endif
         if (InputPara._constraintNum == 0)
         {
             readConstraints(InputPara._inConstraintFilename);
         }
-        std::cout << "Number of input points:      " << inPointVec.size() << std::endl;
+        std::cout << "Number of input points:      " << InputPtNum << std::endl;
         std::cout << "Number of input constraints: " << inConstraintVec.size() << std::endl;
 
         // Remove duplicates
         HashPoint2 hashPoint2;
-        PointTable pointSet(static_cast<int>(inPointVec.size()), hashPoint2);
-        IntHVec    pointMap(inPointVec.size());
-        // Iterate input points
-        for (size_t ip = 0; ip < inPointVec.size(); ++ip)
-        {
-            Point2 inPt = inPointVec[ip];
-            int    ptIdx;
-            // Check if point unique
-            if (!pointSet.get(inPt, &ptIdx))
-            {
-                pointVec.push_back(inPt);
-                ptIdx = static_cast<int>(pointVec.size()) - 1;
-                pointSet.insert(inPt, ptIdx);
-            }
-            pointMap[ip] = ptIdx;
-        }
-        const auto dupCount = inPointVec.size() - pointVec.size();
-        if (dupCount > 0)
-        {
-            std::cout << dupCount << " duplicate points in input file!" << std::endl;
-        }
-        // Iterate input constraints
-        for (size_t i = 0; i < inConstraintVec.size(); ++i)
-        {
-            const Segment inC  = inConstraintVec[i];
-            const Segment newC = {pointMap[inC._v[0]], pointMap[inC._v[1]]};
-            if (newC._v[0] != newC._v[1] && constraintVec.size() < inConstraintVec.size())
-            {
-                constraintVec.push_back(newC);
-            }
-        }
-        const auto dupConstraint = inConstraintVec.size() - constraintVec.size();
-        if (dupConstraint > 0)
-            std::cout << dupConstraint << " degenerate or ignored constraints in input file!" << std::endl;
-    }
-    else
-    {
-        makePoints(InputPara._pointNum, InputPara._dist, pointVec, InputPara._seed);
-        if (InputPara._saveToFile)
-        {
-            std::ofstream OutputFile(InputPara._savePath);
-            if (OutputFile.is_open())
-            {
-                OutputFile << std::setprecision(12);
-                for (const auto &pt : inPointVec)
-                {
-                    OutputFile << pt._p[0] << " " << pt._p[1] << std::endl;
-                }
-                OutputFile.close();
-            }
-            else
-            {
-                std::cerr << InputPara._savePath << " is not a valid path!" << std::endl;
-            }
-        }
-    }
-}
-
-void InputCreator::createPoints(const InputCreatorPara &InputPara, const pcl::PointCloud<POINT_TYPE>::Ptr &InputPC, Point2HVec &pointVec, SegmentHVec &constraintVec)
-{
-    if (InputPara._inFile)
-    {
-        readPoints(InputPara._inFilename, InputPC);
-        if (InputPara._constraintNum == 0)
-        {
-            readConstraints(InputPara._inConstraintFilename);
-        }
-        std::cout << "Number of input points:      " << inPointVec.size() << std::endl;
-        std::cout << "Number of input constraints: " << inConstraintVec.size() << std::endl;
-
-        // Remove duplicates
-        HashPoint2 hashPoint2;
-        PointTable pointSet(static_cast<int>(inPointVec.size()), hashPoint2);
-        IntHVec    pointMap(inPointVec.size());
+        PointTable pointSet(static_cast<int>(InputPtNum), hashPoint2);
+        IntHVec    pointMap(InputPtNum);
+#ifndef DISABLE_PCL_INPUT
         pcl::PointIndices::Ptr FilterIdx(new pcl::PointIndices);
+#endif
         // Iterate input points
-        for (size_t ip = 0; ip < inPointVec.size(); ++ip)
+        for (size_t ip = 0; ip < InputPtNum; ++ip)
         {
-            Point2 inPt = inPointVec[ip];
-            int    ptIdx;
+#ifndef DISABLE_PCL_INPUT
+            const Point2 inPt{(*inPointCloud)[ip].x, (*inPointCloud)[ip].x};
+#else
+            const auto inPt = inPointVec[ip];
+#endif
+            int ptIdx;
             // Check if point unique
             if (!pointSet.get(inPt, &ptIdx))
             {
-                pointVec.push_back(inPt);
-                ptIdx = static_cast<int>(pointVec.size()) - 1;
+                InputPointVec.push_back(inPt);
+                ptIdx = static_cast<int>(InputPointVec.size()) - 1;
                 pointSet.insert(inPt, ptIdx);
+#ifndef DISABLE_PCL_INPUT
                 FilterIdx->indices.push_back(static_cast<int>(ip));
+#endif
             }
             pointMap[ip] = ptIdx;
         }
+#ifndef DISABLE_PCL_INPUT
         pcl::ExtractIndices<POINT_TYPE> extract;
-        extract.setInputCloud(InputPC);
+        extract.setInputCloud(inPointCloud);
         extract.setIndices(FilterIdx);
-        extract.filter(*InputPC);
-        const auto dupCount = inPointVec.size() - pointVec.size();
+        extract.filter(InputPointCloud);
+#endif
+        const auto dupCount = InputPtNum - InputPointVec.size();
         if (dupCount > 0)
         {
             std::cout << dupCount << " duplicate points in input file!" << std::endl;
@@ -131,18 +84,18 @@ void InputCreator::createPoints(const InputCreatorPara &InputPara, const pcl::Po
         {
             const Segment inC  = inConstraintVec[i];
             const Segment newC = {pointMap[inC._v[0]], pointMap[inC._v[1]]};
-            if (newC._v[0] != newC._v[1] && constraintVec.size() < inConstraintVec.size())
+            if (newC._v[0] != newC._v[1] && InputConstraintVec.size() < inConstraintVec.size())
             {
-                constraintVec.push_back(newC);
+                InputConstraintVec.push_back(newC);
             }
         }
-        const auto dupConstraint = inConstraintVec.size() - constraintVec.size();
+        const auto dupConstraint = inConstraintVec.size() - InputConstraintVec.size();
         if (dupConstraint > 0)
             std::cout << dupConstraint << " degenerate or ignored constraints in input file!" << std::endl;
     }
     else
     {
-        makePoints(InputPara._pointNum, InputPara._dist, pointVec, InputPara._seed);
+        makePoints(InputPara._pointNum, InputPara._dist, InputPointVec, InputPara._seed);
         if (InputPara._saveToFile)
         {
             std::ofstream OutputFile(InputPara._savePath);
@@ -291,39 +244,14 @@ void InputCreator::makePoints(int pointNum, Distribution dist, Point2HVec &point
 
 void InputCreator::readPoints(const std::string &inFilename)
 {
-    if (inFilename.substr(inFilename.size() - 4, 4) == ".pcd")
-    {
-        pcl::PointCloud<POINT_TYPE> pc;
-        pcl::io::loadPCDFile(inFilename, pc);
-        for (auto &pt : pc)
-        {
-            inPointVec.push_back(Point2(pt.x, pt.y));
-        }
-    }
-    else
-    {
-        std::ifstream inFile(inFilename);
-        std::string   LineData;
-        Point2        pt;
-        while (std::getline(inFile, LineData))
-        {
-            std::stringstream ss(LineData);
-            ss >> pt._p[0] >> pt._p[1];
-            inPointVec.push_back(pt);
-        }
-        inFile.close();
-    }
-}
 
-void InputCreator::readPoints(const std::string &inFilename, const pcl::PointCloud<POINT_TYPE>::Ptr &InputPC)
-{
     if (inFilename.substr(inFilename.size() - 4, 4) == ".pcd")
     {
-        pcl::io::loadPCDFile(inFilename, *InputPC);
-        for (auto &pt : *InputPC)
-        {
-            inPointVec.push_back(Point2(pt.x, pt.y));
-        }
+#ifndef DISABLE_PCL_INPUT
+        pcl::io::loadPCDFile(inFilename, *inPointCloud);
+#else
+        std::cerr << "Please enable pcl lib in conf.yaml to load .pcd point cloud!" << std::endl;
+#endif
     }
     else
     {

@@ -1,15 +1,10 @@
 #ifndef GDEL2D_INPUTCREATOR_H
 #define GDEL2D_INPUTCREATOR_H
 
-#ifndef PCL_NO_PRECOMPILE
-#define PCL_NO_PRECOMPILE
-#endif
-
-#include "../inc/PointType.h"
 #include "CommonTypes.h"
+#include "GPU/GpuDelaunay.h"
 #include "HashTable.h"
 #include "RandGen.h"
-#include <pcl/point_cloud.h>
 
 const int GridSize = 8192;
 
@@ -45,8 +40,11 @@ struct InputCreatorPara
 class InputCreator
 {
   private:
-    RandGen     randGen;
-    Point2HVec  inPointVec;
+    RandGen    randGen;
+    Point2HVec inPointVec;
+#ifndef DISABLE_PCL_INPUT
+    pcl::PointCloud<POINT_TYPE>::Ptr inPointCloud = nullptr;
+#endif
     SegmentHVec inConstraintVec;
 
     void randCirclePoint(double &x, double &y);
@@ -55,16 +53,19 @@ class InputCreator
 
     void readPoints(const std::string &inFilename);
 
-    void readPoints(const std::string &inFilename, const pcl::PointCloud<POINT_TYPE>::Ptr &InputPC);
-
     void readConstraints(const std::string &inFilename);
 
   public:
+#ifndef DISABLE_PCL_INPUT
+    InputCreator() : inPointCloud(new pcl::PointCloud<POINT_TYPE>){};
+    void createPoints(const InputCreatorPara      &InputPara,
+                      pcl::PointCloud<POINT_TYPE> &InputPointCloud,
+                      Point2HVec                  &InputPointVec,
+                      SegmentHVec                 &InputConstraintVec);
+#else
     InputCreator() = default;
-
-    void createPoints(const InputCreatorPara &InputPara, Point2HVec &pointVec, SegmentHVec &constraintVec);
-
-    void createPoints(const InputCreatorPara &InputPara, const pcl::PointCloud<POINT_TYPE>::Ptr &InputPC, Point2HVec &pointVec, SegmentHVec &constraintVec);
+    void createPoints(const InputCreatorPara &InputPara, Point2HVec &InputPointVec, SegmentHVec &InputConstraintVec);
+#endif
 };
 
 #endif //GDEL2D_INPUTCREATOR_H
