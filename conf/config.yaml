@@ -1,4 +1,10 @@
 #-------------------------------------------------------------------------------#
+# If disable PCL point clouds as input
+DisablePCL: false
+# Use self-defined point type
+CustomizePointType: true
+
+#-------------------------------------------------------------------------------#
 # Number of the times of running
 RunNum: 1
 

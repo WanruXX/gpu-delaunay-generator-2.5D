@@ -40,3 +40,5 @@
 *build*/
 *results*/
 *test*/
+__pycache__/
+.vscode/
