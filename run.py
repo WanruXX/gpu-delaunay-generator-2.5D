@@ -5,6 +5,7 @@ import hydra
 
 @hydra.main(version_base=None, config_path='conf/', config_name='config.yaml')
 def my_app(cfg: DictConfig):
+    os.chdir(os.path.dirname(__file__))
     PointTypeHeaderPath = os.path.join(os.getcwd(), "app/inc/PointType.h")
     with open(PointTypeHeaderPath, "r") as f:
         Lines = f.readlines()

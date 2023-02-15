@@ -42,3 +42,4 @@
 *test*/
 __pycache__/
 .vscode/
+*output*/
