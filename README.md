@@ -30,7 +30,7 @@ To switch from double to single precision, simply define REAL_TYPE_FP32.
 
 For more details on the input and output, refer to: 
 	CommonTypes.h 	(near the end)
-	InputCreator.cpp 
+	InputGenerator.cpp 
 	DelaunayChecker.cpp. 
 
 ====

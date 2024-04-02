@@ -11,10 +11,10 @@ RunNum: 1
 #-------------------------------------------------------------------------------#
 # Choose the source of points
 #-------------------------------------------------------------------------------#
-InputFromFile: true
+InputFromFile: false
 #---------------------------------------------------#
 # if InputFromFile
-InputPointCloudFile: "/home/wxxs6p/repo/gDel2D-edition/test1/Fede_left_4_fromtxt.pcd"
+InputPointCloudFile: "/home/wxxs6p/repo/gDel2D-edition/app/test1/slices/slice_138.pcd"
 InputConstraintFile: ""
 #---------------------------------------------------#
 # if NOT InputFromFile
@@ -26,8 +26,8 @@ ConstraintNum: -1
 # Initial seed
 Seed: 76213898
 # Save randomly generated points
-SaveToFile: false
-SavePath: ""
+SaveToFile: true
+SavePath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/points.txt"
 #-------------------------------------------------------------------------------#
 
 # Insert all before flipping
@@ -46,11 +46,6 @@ ProfLevel: "Default"
 DoCheck: false
 
 # Output check/triangulation result
-OutputResult: false
-# The coordinate of the initial origin point in UTM, if it's originally in UTM then {0,0,0}
-MapOriginInUTM:
-  X: 650900
-  Y: 6561500
-  Z: 42
-OutputCheckResult: "/home/wxxs6p/repo/gDel2D-edition/test1/statistics.csv"
-OutputMeshPath: "/home/wxxs6p/repo/gDel2D-edition/test1/Fede_left_4_tri.geojson"
+OutputResult: true
+OutputCheckResult: "/home/wxxs6p/Documents/private/gDel2D-edition/test/statistics.csv"
+OutputMeshPath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/slice_138.geojson"
