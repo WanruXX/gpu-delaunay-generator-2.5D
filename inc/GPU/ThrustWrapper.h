@@ -26,10 +26,10 @@ void thrust_free_all();
 void thrust_sort_by_key(
     DevVector<int>::DevPtr                                                                  keyBeg,
     DevVector<int>::DevPtr                                                                  keyEnd,
-    thrust::zip_iterator<thrust::tuple<DevVector<int>::DevPtr, DevVector<Point2D>::DevPtr>> valueBeg);
+    thrust::zip_iterator<thrust::tuple<DevVector<int>::DevPtr, DevVector<Point>::DevPtr>> valueBeg);
 
-void thrust_transform_GetMortonNumber(DevVector<Point2D>::DevPtr inBeg,
-                                      DevVector<Point2D>::DevPtr inEnd,
+void thrust_transform_GetMortonNumber(DevVector<Point>::DevPtr inBeg,
+                                      DevVector<Point>::DevPtr inEnd,
                                       DevVector<int>::DevPtr     outBeg,
                                       double                      minVal,
                                       double                      maxVal);
@@ -71,7 +71,7 @@ struct GetMortonNumber
 
     // Note: No performance benefit by changing by-reference to by-value here
     // Note: No benefit by making this __forceinline__
-    __device__ int operator()(const Point2D &point) const
+    __device__ int operator()(const Point &point) const
     {
         const int Gap08 = 0x00FF00FF; // Creates 16-bit gap between value bits
         const int Gap04 = 0x0F0F0F0F; // ... and so on ...

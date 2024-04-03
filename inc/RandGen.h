@@ -1,5 +1,5 @@
-#ifndef GDEL2D_RANDGEN_H
-#define GDEL2D_RANDGEN_H
+#ifndef DELAUNAY_GENERATOR_RANDGEN_H
+#define DELAUNAY_GENERATOR_RANDGEN_H
 
 class RandGen
 {
@@ -26,4 +26,4 @@ class RandGen
     double        random();
 };
 
-#endif //GDEL2D_RANDGEN_H
+#endif //DELAUNAY_GENERATOR_RANDGEN_H

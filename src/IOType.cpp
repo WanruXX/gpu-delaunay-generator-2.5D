@@ -6,7 +6,7 @@ void Input::removeDuplicates(){
     Point2DHVec  oldPointVec = std::move(pointVec);
     EdgeHVec     oldConstraintVec = std::move(constraintVec);
 
-    std::unordered_set<Point2D, Point2DHash> pointSet;
+    std::unordered_set<Point, PointHash> pointSet;
     std::vector<int>    pointMap(oldPointVec.size());
     for (std::size_t i = 0; i < oldPointVec.size(); ++i)
     {

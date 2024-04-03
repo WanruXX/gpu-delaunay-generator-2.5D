@@ -4,7 +4,7 @@ PredWrapper2D::PredWrapper2D() : _pointArr(nullptr), _pointNum(0), _infIdx(0)
 {
 }
 
-PredWrapper2D::PredWrapper2D(const Point2DHVec &pointVec, Point2D ptInfty)
+PredWrapper2D::PredWrapper2D(const Point2DHVec &pointVec, Point ptInfty)
 {
     _pointArr = &pointVec[0];
     _pointNum = pointVec.size();
@@ -13,7 +13,7 @@ PredWrapper2D::PredWrapper2D(const Point2DHVec &pointVec, Point2D ptInfty)
     exactinit();
 }
 
-const Point2D &PredWrapper2D::getPoint(int idx) const
+const Point &PredWrapper2D::getPoint(int idx) const
 {
     return (idx == _infIdx) ? _ptInfty : _pointArr[idx];
 }
@@ -27,7 +27,7 @@ Orient PredWrapper2D::doOrient2D(int v0, int v1, int v2) const
 {
     assert((v0 != v1) && (v0 != v2) && (v1 != v2) && "Duplicate indices in orientation!");
 
-    const Point2D p[] = {getPoint(v0), getPoint(v1), getPoint(v2)};
+    const Point p[] = {getPoint(v0), getPoint(v1), getPoint(v2)};
 
     double det = orient2d(p[0]._p, p[1]._p, p[2]._p);
 
@@ -117,7 +117,7 @@ Side PredWrapper2D::doIncircle(Tri tri, int vert) const
     if (vert == _infIdx)
         return SideOut;
 
-    const Point2D pt[] = {getPoint(tri._v[0]), getPoint(tri._v[1]), getPoint(tri._v[2]), getPoint(vert)};
+    const Point pt[] = {getPoint(tri._v[0]), getPoint(tri._v[1]), getPoint(tri._v[2]), getPoint(vert)};
 
     double det;
 

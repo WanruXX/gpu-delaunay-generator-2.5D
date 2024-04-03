@@ -1,5 +1,5 @@
-#ifndef GDEL2D_COMMONTYPES_H
-#define GDEL2D_COMMONTYPES_H
+#ifndef DELAUNAY_GENERATOR_COMMONTYPES_H
+#define DELAUNAY_GENERATOR_COMMONTYPES_H
 
 // STL
 #include <algorithm>
@@ -90,17 +90,17 @@ void setTriIdxVi(int &output, int oldVi, int ni, int newVi)
     output += ((ni << 2) + newVi) << (oldVi * 4);
 }
 
-struct Point2D
+struct Point
 {
-    double _p[2] = {0, 0};
+    double _p[3] = {0, 0, 0};
 
-    Point2D()=default;
-
-    INLINE_H_D
-    Point2D(double x, double y) : _p{x, y} {};
+    Point()=default;
 
     INLINE_H_D
-    bool operator<(const Point2D &pt) const
+    Point(double x, double y, double z) : _p{x, y, z} {};
+
+    INLINE_H_D
+    bool operator<(const Point &pt) const
     {
         if (_p[0] < pt._p[0])
             return true;
@@ -113,13 +113,13 @@ struct Point2D
     }
 
     INLINE_H_D
-    bool operator==(const Point2D &pt) const
+    bool operator==(const Point &pt) const
     {
         return (_p[0] == pt._p[0] && _p[1] == pt._p[1]);
     }
 
     INLINE_H_D
-    bool operator!=(const Point2D &pt) const
+    bool operator!=(const Point &pt) const
     {
         return !(*this==pt);
     }
@@ -464,8 +464,8 @@ using       IntDVec = DevVector<int>;
 typedef DevVector<int2>     Int2DVec;
 typedef DevVector<float>    FloatDVec;
 typedef DevVector<double>   RealDVec;
-typedef DevVector<Point2D>   Point2DVec;
-typedef DevVector<Edge>  SegmentDVec;
+typedef DevVector<Point>    PointDVec;
+typedef DevVector<Edge>     EdgeDVec;
 typedef DevVector<Tri>      TriDVec;
 typedef DevVector<TriOpp>   TriOppDVec;
 typedef DevVector<FlipItem> FlipDVec;
@@ -476,7 +476,7 @@ typedef thrust::host_vector<bool>    BoolHVec;
 typedef thrust::host_vector<char>    CharHVec;
 typedef thrust::host_vector<int>     IntHVec;
 typedef thrust::host_vector<double>  RealHVec;
-using Point2DHVec = thrust::host_vector<Point2D>  ;
+using Point2DHVec = thrust::host_vector<Point>  ;
 using EdgeHVec = thrust::host_vector<Edge> ;
 
 typedef thrust::host_vector<Tri>    TriHVec;

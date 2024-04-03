@@ -114,7 +114,7 @@ void thrust_free_all()
 void thrust_sort_by_key(
     DevVector<int>::DevPtr                                                                  keyBeg,
     DevVector<int>::DevPtr                                                                  keyEnd,
-    thrust::zip_iterator<thrust::tuple<DevVector<int>::DevPtr, DevVector<Point2D>::DevPtr>> valueBeg)
+    thrust::zip_iterator<thrust::tuple<DevVector<int>::DevPtr, DevVector<Point>::DevPtr>> valueBeg)
 {
     thrust::sort_by_key(
         //thrust::cuda::par( thrustAllocator ),
@@ -123,8 +123,8 @@ void thrust_sort_by_key(
         valueBeg);
 }
 
-void thrust_transform_GetMortonNumber(DevVector<Point2D>::DevPtr inBeg,
-                                      DevVector<Point2D>::DevPtr inEnd,
+void thrust_transform_GetMortonNumber(DevVector<Point>::DevPtr inBeg,
+                                      DevVector<Point>::DevPtr inEnd,
                                       DevVector<int>::DevPtr     outBeg,
                                       double                      minVal,
                                       double                      maxVal)

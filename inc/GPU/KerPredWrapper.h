@@ -1,7 +1,7 @@
 #include "DPredWrapper.h"
 #include "KerShewchuk.h"
 
-void DPredWrapper::init(Point2D *pointArr, int pointNum, int *orgPointIdx, int infIdx)
+void DPredWrapper::init(Point *pointArr, int pointNum, int *orgPointIdx, int infIdx)
 {
     _pointArr    = pointArr;
     _pointNum    = pointNum;
@@ -19,7 +19,7 @@ void DPredWrapper::cleanup()
     cuDelete(&_predConsts);
 }
 
-__forceinline__ __device__ const Point2D &DPredWrapper::getPoint(int idx) const
+__forceinline__ __device__ const Point &DPredWrapper::getPoint(int idx) const
 {
     return _pointArr[idx];
 }

@@ -39,7 +39,7 @@ struct Output
     TriHVec           triVec;
     TriOppHVec        triOppVec;
     std::set<Edge> segVec;
-    Point2D           ptInf;
+    Point             ptInf;
     Statistics        stats;
 };
 

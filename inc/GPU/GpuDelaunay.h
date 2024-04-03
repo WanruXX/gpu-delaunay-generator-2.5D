@@ -1,18 +1,11 @@
-#ifndef GDEL2D_GPUDELAUNAYC_H
-#define GDEL2D_GPUDELAUNAYC_H
-
-#ifdef WITH_PCL
-#include "../PointType.h"
-#include <pcl/point_cloud.h>
-#endif
+#ifndef DELAUNAY_GENERATOR_GPUDELAUNAYC_H
+#define DELAUNAY_GENERATOR_GPUDELAUNAYC_H
 
 #include <array>
 #include <iomanip>
 #include <iostream>
-
 #include "../IOType.h"
 #include "../PerfTimer.h"
-
 #include "CudaWrapper.h"
 #include "DPredWrapper.h"
 #include "HostToKernel.h"
@@ -41,8 +34,8 @@ private:
     Output       *_output = nullptr;
 
     // Input
-    Point2DVec  _pointVec;
-    SegmentDVec _constraintVec;
+    PointDVec   _pointVec;
+    EdgeDVec    _constraintVec;
     int         _pointNum = 0;
     int         _triMax   = 0;
     double      _minVal   = 0;
@@ -74,7 +67,7 @@ private:
     // Very small
     IntHVec       _orgFlipNum;
     SmallCounters _counters{};
-    Point2D       _ptInfty;
+    Point         _ptInfty;
     int           _infIdx     = 0;
     int           _availPtNum = 0;
     DPredWrapper  _dPredWrapper;
@@ -143,4 +136,4 @@ public:
 //constexpr int GpuDel::TriSegNum;
 //constexpr int GpuDel::TriSeg[3][2];
 
-#endif //GDEL2D_GPUDELAUNAYC_H
+#endif //DELAUNAY_GENERATOR_GPUDELAUNAYC_H

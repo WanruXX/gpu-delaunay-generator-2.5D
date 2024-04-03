@@ -6,7 +6,7 @@
 class DPredWrapper
 {
   private:
-    Point2D *_pointArr    = nullptr;
+    Point  *_pointArr    = nullptr;
     int    *_orgPointIdx = nullptr;
     int     _pointNum    = 0;
     double *_predConsts  = nullptr;
@@ -40,13 +40,13 @@ class DPredWrapper
 
     DPredWrapper() = default;
 
-    void init(Point2D *pointArr, int pointNum, int *orgPointIdx, int infIdx);
+    void init(Point *pointArr, int pointNum, int *orgPointIdx, int infIdx);
 
     void cleanup();
 
     __forceinline__ __device__ __host__ int pointNum() const;
 
-    __forceinline__ __device__ const Point2D &getPoint(int idx) const;
+    __forceinline__ __device__ const Point &getPoint(int idx) const;
 
     __forceinline__ __device__ int getPointIdx(int idx) const;
 

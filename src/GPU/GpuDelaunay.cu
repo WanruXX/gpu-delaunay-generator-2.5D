@@ -112,7 +112,7 @@ void GpuDel::restartTiming(ProfLevel level, double &accuTime)
 
 struct CompareX
 {
-    __device__ bool operator()(const Point2D &a, const Point2D &b) const
+    __device__ bool operator()(const Point &a, const Point &b) const
     {
         return a._p[0] < b._p[0];
     }
@@ -120,16 +120,16 @@ struct CompareX
 
 struct Get2Ddist
 {
-    Point2D _a;
+    Point  _a;
     double abx, aby;
 
-    Get2Ddist(const Point2D &a, const Point2D &b) : _a(a)
+    Get2Ddist(const Point &a, const Point &b) : _a(a)
     {
         abx = b._p[0] - a._p[0];
         aby = b._p[1] - a._p[1];
     }
 
-    __device__ int operator()(const Point2D &c)
+    __device__ int operator()(const Point &c)
     {
         double acx = c._p[0] - _a._p[0];
         double acy = c._p[1] - _a._p[1];
@@ -145,15 +145,15 @@ double orient2dzero(const double *pa, const double *pb, const double *pc);
 void GpuDel::constructInitialTriangles()
 {
     // First, choose two extreme points along the X axis
-    typedef Point2DVec::DevPtr Point2DIter;
+    typedef PointDVec::DevPtr PointIter;
 
     const auto ret = thrust::minmax_element(_pointVec.begin(), _pointVec.end(), CompareX());
 
     auto v0 = static_cast<int>(ret.first - _pointVec.begin());
     auto v1 = static_cast<int>(ret.second - _pointVec.begin());
 
-    const Point2D p0 = _pointVec[v0];
-    const Point2D p1 = _pointVec[v1];
+    const Point p0 = _pointVec[v0];
+    const Point p1 = _pointVec[v1];
 
     // Find the furthest point from v0v1
     IntDVec distVec = _memPool.allocateAny<int>(_pointNum);
@@ -163,7 +163,7 @@ void GpuDel::constructInitialTriangles()
     thrust::transform(_pointVec.begin(), _pointVec.end(), distVec.begin(), Get2Ddist(p0, p1));
 
     const auto   v2 = static_cast<int>(thrust::max_element(distVec.begin(), distVec.end()) - distVec.begin());
-    const Point2D p2 = _pointVec[v2];
+    const Point  p2 = _pointVec[v2];
 
     _memPool.release(distVec);
 

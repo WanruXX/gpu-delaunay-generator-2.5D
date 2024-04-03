@@ -1,5 +1,5 @@
-#ifndef GDEL2D_EDIT_TRIANGULATIONHANDLER_H
-#define GDEL2D_EDIT_TRIANGULATIONHANDLER_H
+#ifndef DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
+#define DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
 
 #include "DelaunayChecker.h"
 #include "GPU/GpuDelaunay.h"
@@ -10,10 +10,10 @@
 #include <iomanip>
 
 struct line {
-    Point2D p1, p2;
+    Point p1, p2;
 };
 
-inline bool onLine(line l1, Point2D p)
+inline bool onLine(line l1, Point p)
 {
     // Check whether p is on the line or not
     if (p._p[0] <= std::max(l1.p1._p[0], l1.p2._p[0])
@@ -25,7 +25,7 @@ inline bool onLine(line l1, Point2D p)
     return false;
 }
 
-inline int direction(Point2D a, Point2D b, Point2D c)
+inline int direction(Point a, Point b, Point c)
 {
     auto val = (b._p[1] - a._p[1]) * (c._p[0] - b._p[0])
                - (b._p[0] - a._p[0]) * (c._p[1] - b._p[1]);
@@ -92,20 +92,11 @@ private:
     TriangulationHandler() = default;
     void reset();
     void saveResultsToFile();
-    bool checkInside(Tri &t, Point2D p) const;
+    bool checkInside(Tri &t, Point p) const;
 
-#ifdef WITH_PCL
-    static double getupwards(const POINT_TYPE &pt1, const POINT_TYPE &pt2, const POINT_TYPE &pt3);
-
-    static Eigen::Vector3d getTriNormal(const POINT_TYPE &pt1, const POINT_TYPE &pt2, const POINT_TYPE &pt3);
-
-    Eigen::Vector3d getTriNormal(const Tri &t) const;
-
-    static bool hasValidEdge(const POINT_TYPE &pt1, const POINT_TYPE &pt2, const POINT_TYPE &pt3);
-#endif
 public:
     explicit TriangulationHandler(const char *InputYAMLFile);
     void run();
 };
 
-#endif //GDEL2D_EDIT_TRIANGULATIONHANDLER_H
+#endif //DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H

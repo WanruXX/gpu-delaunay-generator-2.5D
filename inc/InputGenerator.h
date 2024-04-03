@@ -1,8 +1,7 @@
-#ifndef GDEL2D_INPUTCREATOR_H
-#define GDEL2D_INPUTCREATOR_H
+#ifndef DELAUNAY_GENERATOR_INPUTCREATOR_H
+#define DELAUNAY_GENERATOR_INPUTCREATOR_H
 
 #include "CommonTypes.h"
-#include "GPU/GpuDelaunay.h"
 #include "IOType.h"
 #include "RandGen.h"
 
@@ -70,4 +69,4 @@ class InputGenerator
     void generateInput();
 };
 
-#endif //GDEL2D_INPUTCREATOR_H
+#endif //DELAUNAY_GENERATOR_INPUTCREATOR_H

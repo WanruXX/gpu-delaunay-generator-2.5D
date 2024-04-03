@@ -1,15 +1,16 @@
-#ifndef GDEL2D_HASHTABLE_H
-#define GDEL2D_HASHTABLE_H
+#ifndef DELAUNAY_GENERATOR_HASHFUNCTIORS_H
+#define DELAUNAY_GENERATOR_HASHFUNCTIORS_H
 
 #include "CommonTypes.h"
 
-struct Point2DHash
+struct PointHash
 {
-    std::size_t operator()(const Point2D &p) const
+    std::size_t operator()(const Point &p) const
     {
         auto h1 = std::hash<double>{}(p._p[0]);
         auto h2 = std::hash<double>{}(p._p[1]);
-        return h1 ^ h2;
+        auto h3 = std::hash<double>{}(p._p[2]);
+        return h1 ^ h2 ^ h3;
     }
 };
 
@@ -32,4 +33,4 @@ struct EdgeEqual
 };
 
 
-#endif //GDEL2D_HASHTABLE_H
+#endif //DELAUNAY_GENERATOR_HASHFUNCTIORS_H

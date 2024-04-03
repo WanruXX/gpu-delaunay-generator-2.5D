@@ -32,7 +32,7 @@ typedef KerArray< char >     KerCharArray;
 typedef KerArray< uchar >    KerUcharArray;
 typedef KerArray< int >      KerIntArray;
 typedef KerArray< double > KerRealArray;
-typedef KerArray<Point2D>   KerPoint2Array;
+typedef KerArray<Point>   KerPoint2Array;
 typedef KerArray< Tri >      KerTriArray;
 typedef KerArray<Edge>  KerSegArray;
 typedef KerArray< TriOpp >   KerOppArray;

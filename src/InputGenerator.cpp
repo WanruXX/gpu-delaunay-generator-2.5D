@@ -63,7 +63,7 @@ void InputGenerator::generateInput()
             outputPoint << std::setprecision(12);
             for (const auto &pt : input.pointVec)
             {
-                outputPoint << pt._p[0] << " " << pt._p[1] << std::endl;
+                outputPoint << pt._p[0] << " " << pt._p[1] << " " << pt._p[2] << std::endl;
             }
             outputPoint.close();
         }
@@ -131,12 +131,14 @@ void InputGenerator::makePoints()
 
 void InputGenerator::makePointsUniform()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+
+    Point p;
     while (pointSet.size() < option.pointNum)
     {
         p._p[0] = randGen.getNext();
         p._p[1] = randGen.getNext();
+        p._p[2] = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -147,11 +149,12 @@ void InputGenerator::makePointsUniform()
 
 void InputGenerator::makePointsGaussian()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randGen.nextGaussian(p._p[0], p._p[1]);
+        p._p[2] = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -162,8 +165,8 @@ void InputGenerator::makePointsGaussian()
 
 void InputGenerator::makePointsDisk()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         double d;
@@ -175,6 +178,7 @@ void InputGenerator::makePointsDisk()
         } while (d > 0.45 * 0.45);
         p._p[0] += 0.5;
         p._p[1] += 0.5;
+        p._p[2] = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -185,14 +189,15 @@ void InputGenerator::makePointsDisk()
 
 void InputGenerator::makePointsThinCircle()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         double d = randGen.getNext() * 0.001;
         double a = randGen.getNext() * 3.141592654 * 2;
         p._p[0]  = (0.45 + d) * cos(a) + 0.5;
         p._p[1]  = (0.45 + d) * sin(a) + 0.5;
+        p._p[2]  = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -203,13 +208,14 @@ void InputGenerator::makePointsThinCircle()
 
 void InputGenerator::makePointsCircle()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randCirclePoint(p._p[0], p._p[1]);
         p._p[0] += 0.5;
         p._p[1] += 0.5;
+        p._p[2] = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -220,17 +226,18 @@ void InputGenerator::makePointsCircle()
 
 void InputGenerator::makePointsGrid()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
-        for (double &pp : p._p)
-        {
-            const double val  = randGen.getNext() * 8192;
-            const double frac = val - floor(val);
-            pp                = (frac < 0.5f) ? floor(val) : ceil(val);
-            pp /= 8192;
-        }
+
+        double val  = randGen.getNext() * 8192;
+        double frac = val - floor(val);
+        p._p[0]     = ((frac < 0.5f) ? floor(val) : ceil(val)) / 8192;
+        val         = randGen.getNext() * 8192;
+        frac        = val - floor(val);
+        p._p[1]     = ((frac < 0.5f) ? floor(val) : ceil(val)) / 8192;
+        p._p[2]     = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -241,13 +248,14 @@ void InputGenerator::makePointsGrid()
 
 void InputGenerator::makePointsEllipse()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randCirclePoint(p._p[0], p._p[1]);
         p._p[0] = p._p[0] * 1.0 / 3.0 + 0.5;
         p._p[1] = p._p[1] * 2.0 / 3.0 + 0.5;
+        p._p[2] = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -258,16 +266,17 @@ void InputGenerator::makePointsEllipse()
 
 void InputGenerator::makePointsTwoLine()
 {
-    std::unordered_set<Point2D, Point2DHash> pointSet;
-    Point2D                                  p;
+    std::unordered_set<Point, PointHash> pointSet;
+    Point                                p;
 
-    const Point2D L[2][2] = {{{0.0, 0.0}, {0.3, 0.5}}, {{0.7, 0.5}, {1.0, 1.0}}};
+    const Point L[2][2] = {{{0.0, 0.0, 0.0}, {0.3, 0.5, 0.0}}, {{0.7, 0.5, 0.0}, {1.0, 1.0, 0.0}}};
     while (pointSet.size() < option.pointNum)
     {
         int    l = (randGen.getNext() < 0.5) ? 0 : 1;
         double t = randGen.getNext();
         p._p[0]  = (L[l][1]._p[0] - L[l][0]._p[0]) * t + L[l][0]._p[0];
-        p._p[0]  = (L[l][1]._p[1] - L[l][0]._p[1]) * t + L[l][0]._p[1];
+        p._p[1]  = (L[l][1]._p[1] - L[l][0]._p[1]) * t + L[l][0]._p[1];
+        p._p[2]  = cos(p._p[0]);
         if (pointSet.find(p) == pointSet.end())
         {
             pointSet.insert(p);
@@ -285,18 +294,21 @@ void InputGenerator::readPoints()
         pcl::io::loadPCDFile(inFilename, inputPointCloud);
         for (auto &pt : inputPointCloud)
         {
-            input.pointVec.push_back({pt.x, pt.y});
+            input.pointVec.push_back({pt.x, pt.y, pt.z});
         }
         return input.pointVec;
     }
 #endif
     std::ifstream inFile(option.inputFilename);
     std::string   LineData;
-    Point2D       pt;
+    Point         pt;
     while (std::getline(inFile, LineData))
     {
         std::stringstream ss(LineData);
-        ss >> pt._p[0] >> pt._p[1];
+        int i=0;
+        while(ss >> pt._p[i]){
+            ++i;
+        }
         input.pointVec.push_back(pt);
     }
     inFile.close();

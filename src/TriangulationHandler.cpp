@@ -1,11 +1,5 @@
 #include "../inc/TriangulationHandler.h"
 #include "../inc/json.h"
-
-#ifdef WITH_PCL
-#include <pcl/io/pcd_io.h>
-#include <pcl/search/kdtree.h>
-#endif
-
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
@@ -49,9 +43,10 @@ TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
     InputGenerator inputGenerator(inputGeneratorOption, input);
     inputGenerator.generateInput();
     std::cout << "Point generating time: " << ((double)clock() - timer) / CLOCKS_PER_SEC << std::endl;
-    input.insAll               = config["InsertAll"].as<bool>();
-    input.noSort               = config["NoSortPoint"].as<bool>();
-    input.noReorder            = config["NoReorder"].as<bool>();
+    input.insAll    = config["InsertAll"].as<bool>();
+    input.noSort    = config["NoSortPoint"].as<bool>();
+    input.noReorder = config["NoReorder"].as<bool>();
+
     std::string InputProfLevel = config["ProfLevel"].as<std::string>();
     if (InputProfLevel == "Detail")
     {
@@ -146,30 +141,60 @@ void TriangulationHandler::saveResultsToFile()
     std::ofstream outputTri(outTriFilename);
     if (outputTri.is_open())
     {
-        nlohmann::json JsonFile;
-        JsonFile["type"]                      = "FeatureCollection";
-        JsonFile["name"]                      = "left_4_edge_polygon";
-        JsonFile["crs"]["type"]               = "name";
-        JsonFile["crs"]["properties"]["name"] = "urn:ogc:def:crs:EPSG::32601";
-        JsonFile["features"]                  = nlohmann::json::array();
-        for (auto &tri : output.triVec)
+        std::size_t found = outTriFilename.find_last_of('.');
+        if (outTriFilename.substr(found + 1, outTriFilename.size() - found) == "obj")
         {
-            nlohmann::json Coor = nlohmann::json::array();
-            Coor.push_back({static_cast<double>(input.pointVec[tri._v[0]]._p[0]),
-                            static_cast<double>(input.pointVec[tri._v[0]]._p[1])});
-            Coor.push_back({static_cast<double>(input.pointVec[tri._v[1]]._p[0]),
-                            static_cast<double>(input.pointVec[tri._v[1]]._p[1])});
-            Coor.push_back({static_cast<double>(input.pointVec[tri._v[2]]._p[0]),
-                            static_cast<double>(input.pointVec[tri._v[2]]._p[1])});
-            nlohmann::json CoorWrapper = nlohmann::json::array();
-            CoorWrapper.push_back(Coor);
-            nlohmann::json TriangleObject;
-            TriangleObject["type"]       = "Feature";
-            TriangleObject["properties"] = {{"v0", tri._v[0]}, {"v1", tri._v[1]}, {"v2", tri._v[2]}};
-            TriangleObject["geometry"]   = {{"type", "Polygon"}, {"coordinates", CoorWrapper}};
-            JsonFile["features"].push_back(TriangleObject);
+            outputTri << std::setprecision(12);
+            double colors[5][3] = {
+                {0.8, 0.2, 0.2},  // Red
+                {0.9, 0.6, 0.2},  // Orange
+                {0.2, 0.8, 0.2},  // Green
+                {0.2, 0.6, 0.9},  // Sky Blue
+                {0.6, 0.2, 0.8}   // Purple
+            };
+            int i = 0;
+            for (const auto &pt : input.pointVec)
+            {
+                double *color = colors[i % 5];
+                outputTri << "v " << pt._p[0] << " " << pt._p[1] << " " << pt._p[2] << " " << color[0] << " "
+                          << color[1] << " " << color[2] << std::endl;
+                ++i;
+            }
+            for (auto &tri : output.triVec)
+            {
+                outputTri << "f " << tri._v[0] + 1 << " " << tri._v[1] + 1 << " " << tri._v[2] + 1 << std::endl;
+            }
         }
-        outputTri << JsonFile << std::endl;
+        else
+        {
+            nlohmann::json JsonFile;
+            JsonFile["type"]                      = "FeatureCollection";
+            JsonFile["name"]                      = "left_4_edge_polygon";
+            JsonFile["crs"]["type"]               = "name";
+            JsonFile["crs"]["properties"]["name"] = "urn:ogc:def:crs:EPSG::32601";
+            JsonFile["features"]                  = nlohmann::json::array();
+            for (auto &tri : output.triVec)
+            {
+                nlohmann::json Coor = nlohmann::json::array();
+                Coor.push_back({input.pointVec[tri._v[0]]._p[0],
+                                input.pointVec[tri._v[0]]._p[1],
+                                input.pointVec[tri._v[0]]._p[2]});
+                Coor.push_back({input.pointVec[tri._v[1]]._p[0],
+                                input.pointVec[tri._v[1]]._p[1],
+                                input.pointVec[tri._v[1]]._p[2]});
+                Coor.push_back({input.pointVec[tri._v[2]]._p[0],
+                                input.pointVec[tri._v[2]]._p[1],
+                                input.pointVec[tri._v[2]]._p[2]});
+                nlohmann::json CoorWrapper = nlohmann::json::array();
+                CoorWrapper.push_back(Coor);
+                nlohmann::json TriangleObject;
+                TriangleObject["type"]       = "Feature";
+                TriangleObject["properties"] = {{"v0", tri._v[0]}, {"v1", tri._v[1]}, {"v2", tri._v[2]}};
+                TriangleObject["geometry"]   = {{"type", "Polygon"}, {"coordinates", CoorWrapper}};
+                JsonFile["features"].push_back(TriangleObject);
+            }
+            outputTri << JsonFile << std::endl;
+        }
         outputTri.close();
     }
     else
@@ -179,17 +204,16 @@ void TriangulationHandler::saveResultsToFile()
     }
 }
 
-bool TriangulationHandler::checkInside(Tri &t, Point2D p) const
+bool TriangulationHandler::checkInside(Tri &t, Point p) const
 {
     // Create a point at infinity, y is same as point p
-    line exline = {p, {p._p[0] + 320, p._p[1]}};
+    line exline = {p, {p._p[0] + 320, p._p[1], p._p[2]}};
     int  count  = 0;
     for (auto i : TriSeg)
     {
         line side = {input.pointVec[t._v[i[0]]], input.pointVec[t._v[i[1]]]};
         if (isIntersect(side, exline))
         {
-
             // If side intersects exline
             if (direction(side.p1, p, side.p2) == 0)
                 return onLine(side, p);
@@ -199,48 +223,3 @@ bool TriangulationHandler::checkInside(Tri &t, Point2D p) const
     // When count is odd
     return count & 1;
 }
-
-#ifdef WITH_PCL
-double TriangulationHandler::getupwards(const tTrimblePoint &pt1, const tTrimblePoint &pt2, const tTrimblePoint &pt3)
-{
-    Eigen::Vector3d Upward(0, 0, 1);
-    auto            Norm = getTriNormal(pt1, pt2, pt3);
-    return std::acos(Norm.dot(Upward)) * 180 / M_PI;
-}
-
-Eigen::Vector3d
-TriangulationHandler::getTriNormal(const tTrimblePoint &pt1, const tTrimblePoint &pt2, const tTrimblePoint &pt3)
-{
-    //    Eigen::Vector3d pt1pt2(pt2.x - pt1.x, pt2.y - pt1.y, pt2.z - pt1.z);
-    //    Eigen::Vector3d pt2pt3(pt3.x - pt2.x, pt3.y - pt2.y, pt3.z - pt2.z);
-    Eigen::Vector3d pt1pt2(pt2.x - pt1.x, pt2.y - pt1.y, pt2.classflags - pt1.classflags);
-    Eigen::Vector3d pt2pt3(pt3.x - pt2.x, pt3.y - pt2.y, pt3.classflags - pt2.classflags);
-    auto            Normal = pt1pt2.cross(pt2pt3);
-    auto            Norm   = Normal(2) > 0 ? Normal : -Normal;
-    //    double          c0     = pt1pt2(1) * pt2pt3(2) - pt1pt2(2) * pt2pt3(1);
-    //    double          c1     = pt1pt2(2) * pt2pt3(0) - pt1pt2(0) * pt2pt3(2);
-    //    double          c2     = pt1pt2(0) * pt2pt3(1) - pt1pt2(1) * pt2pt3(0);
-    //    std::cout << std::setprecision(10);
-    //    std::cout << pt1pt2(0) << " " << pt1pt2(1) << " " << pt1pt2(2) << std::endl;
-    //    std::cout << pt2pt3(0) << " " << pt2pt3(1) << " " << pt2pt3(2) << std::endl;
-    //    std::cout << Norm(0) << " " << Norm(1) << " " << Norm(2) << std::endl;
-    //    std::cout << c0 << " " << c1 << " " << c2 << std::endl;
-    Norm.normalize();
-    return Norm;
-}
-
-Eigen::Vector3d TriangulationHandler::getTriNormal(const Tri &t) const
-{
-    auto pt1 = InputPointCloud[t._v[0]];
-    auto pt2 = InputPointCloud[t._v[1]];
-    auto pt3 = InputPointCloud[t._v[2]];
-    return getTriNormal(pt1, pt2, pt3);
-}
-
-bool TriangulationHandler::hasValidEdge(const tTrimblePoint &pt1, const tTrimblePoint &pt2, const tTrimblePoint &pt3)
-{
-    return (pt1.x - pt2.x) * (pt1.x - pt2.x) + (pt1.y - pt2.y) * (pt1.y - pt2.y) < 1 &&
-           (pt3.x - pt2.x) * (pt3.x - pt2.x) + (pt3.y - pt2.y) * (pt3.y - pt2.y) < 1 &&
-           (pt1.x - pt3.x) * (pt1.x - pt3.x) + (pt1.y - pt3.y) * (pt1.y - pt3.y) < 1;
-}
-#endif
