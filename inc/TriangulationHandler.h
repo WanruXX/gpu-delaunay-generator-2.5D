@@ -9,17 +9,16 @@
 #include <Eigen/Dense>
 #include <iomanip>
 
-struct line {
+struct line
+{
     Point p1, p2;
 };
 
 inline bool onLine(line l1, Point p)
 {
     // Check whether p is on the line or not
-    if (p._p[0] <= std::max(l1.p1._p[0], l1.p2._p[0])
-        && p._p[0] <= std::min(l1.p1._p[0], l1.p2._p[0])
-        && (p._p[1] <= std::max(l1.p1._p[1], l1.p2._p[1])
-            && p._p[1] <= std::min(l1.p1._p[1], l1.p2._p[1])))
+    if (p._p[0] <= std::max(l1.p1._p[0], l1.p2._p[0]) && p._p[0] <= std::min(l1.p1._p[0], l1.p2._p[0]) &&
+        (p._p[1] <= std::max(l1.p1._p[1], l1.p2._p[1]) && p._p[1] <= std::min(l1.p1._p[1], l1.p2._p[1])))
         return true;
 
     return false;
@@ -27,8 +26,7 @@ inline bool onLine(line l1, Point p)
 
 inline int direction(Point a, Point b, Point c)
 {
-    auto val = (b._p[1] - a._p[1]) * (c._p[0] - b._p[0])
-               - (b._p[0] - a._p[0]) * (c._p[1] - b._p[1]);
+    auto val = (b._p[1] - a._p[1]) * (c._p[0] - b._p[0]) - (b._p[0] - a._p[0]) * (c._p[1] - b._p[1]);
 
     if (val == 0)
 
@@ -77,24 +75,25 @@ inline bool isIntersect(line l1, line l2)
 
 class TriangulationHandler
 {
-private:
-    int  runNum   = 1;
-    bool doCheck  = false;
-
-    bool        outputResult = false;
-    std::string outTriFilename;
-
-    Input        input;
-    Output       output;
-
-    Statistics statSum;
-
+  private:
     TriangulationHandler() = default;
+
     void reset();
     void saveResultsToFile();
+    void saveToGeojson(std::ofstream &outputTri) const;
+    void saveToObj(std::ofstream &outputTri) const;
     bool checkInside(Tri &t, Point p) const;
 
-public:
+    int         runNum       = 1;
+    bool        doCheck      = false;
+    bool        outputResult = false;
+    std::string OutputFilename;
+
+    Input       input;
+    Output      output;
+    Statistics  statSum;
+
+  public:
     explicit TriangulationHandler(const char *InputYAMLFile);
     void run();
 };

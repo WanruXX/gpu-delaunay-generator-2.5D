@@ -5,6 +5,8 @@
 
 TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
 {
+    CudaSafeCall(cudaSetDevice(cutGetMaxGflopsDeviceId()));
+
     YAML::Node config = YAML::LoadFile(InputYAMLFile);
 
     runNum  = config["RunNum"].as<int>();
@@ -65,29 +67,18 @@ TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
         input.profLevel = ProfDefault;
     }
 
-    outputResult   = config["OutputResult"].as<bool>();
-    outTriFilename = config["OutputMeshPath"].as<std::string>();
-    if (access(inputGeneratorOption.saveFilename.c_str(), F_OK) == -1)
-    {
-        std::cerr << "Saving path for generated points is not valid! will not save..." << std::endl;
-        inputGeneratorOption.saveToFile = false;
-    }
+    outputResult   = config["OutputTriangles"].as<bool>();
+    OutputFilename = config["OutputTrianglePath"].as<std::string>();
 }
 
 void TriangulationHandler::reset()
 {
     TriHVec().swap(output.triVec);
     TriOppHVec().swap(output.triOppVec);
-    cudaDeviceReset();
 }
 
 void TriangulationHandler::run()
 {
-    // Pick the best CUDA device
-    const int deviceIdx = cutGetMaxGflopsDeviceId();
-    CudaSafeCall(cudaSetDevice(deviceIdx));
-    CudaSafeCall(cudaDeviceReset());
-
     GpuDel gpuDel;
     for (int i = 0; i < runNum; ++i)
     {
@@ -138,69 +129,81 @@ void TriangulationHandler::run()
 
 void TriangulationHandler::saveResultsToFile()
 {
-    std::ofstream outputTri(outTriFilename);
+    std::ofstream outputTri(OutputFilename);
     if (outputTri.is_open())
     {
-        std::size_t found = outTriFilename.find_last_of('.');
-        if (outTriFilename.substr(found + 1, outTriFilename.size() - found) == "obj")
+        std::size_t found = OutputFilename.find_last_of('.');
+        std::string extension = OutputFilename.substr(found + 1, OutputFilename.size() - found);
+        if ( extension == "obj")
         {
-            outputTri << std::setprecision(12);
-            double colors[5][3] = {
-                {0.8, 0.2, 0.2},  // Red
-                {0.9, 0.6, 0.2},  // Orange
-                {0.2, 0.8, 0.2},  // Green
-                {0.2, 0.6, 0.9},  // Sky Blue
-                {0.6, 0.2, 0.8}   // Purple
-            };
-            int i = 0;
-            for (const auto &pt : input.pointVec)
-            {
-                double *color = colors[i % 5];
-                outputTri << "v " << pt._p[0] << " " << pt._p[1] << " " << pt._p[2] << " " << color[0] << " "
-                          << color[1] << " " << color[2] << std::endl;
-                ++i;
-            }
-            for (auto &tri : output.triVec)
-            {
-                outputTri << "f " << tri._v[0] + 1 << " " << tri._v[1] + 1 << " " << tri._v[2] + 1 << std::endl;
-            }
+            saveToObj(outputTri);
         }
-        else
+        else if(extension == "geojson")
         {
-            nlohmann::json JsonFile;
-            JsonFile["type"]                      = "FeatureCollection";
-            JsonFile["name"]                      = "left_4_edge_polygon";
-            JsonFile["crs"]["type"]               = "name";
-            JsonFile["crs"]["properties"]["name"] = "urn:ogc:def:crs:EPSG::32601";
-            JsonFile["features"]                  = nlohmann::json::array();
-            for (auto &tri : output.triVec)
-            {
-                nlohmann::json Coor = nlohmann::json::array();
-                Coor.push_back({input.pointVec[tri._v[0]]._p[0],
-                                input.pointVec[tri._v[0]]._p[1],
-                                input.pointVec[tri._v[0]]._p[2]});
-                Coor.push_back({input.pointVec[tri._v[1]]._p[0],
-                                input.pointVec[tri._v[1]]._p[1],
-                                input.pointVec[tri._v[1]]._p[2]});
-                Coor.push_back({input.pointVec[tri._v[2]]._p[0],
-                                input.pointVec[tri._v[2]]._p[1],
-                                input.pointVec[tri._v[2]]._p[2]});
-                nlohmann::json CoorWrapper = nlohmann::json::array();
-                CoorWrapper.push_back(Coor);
-                nlohmann::json TriangleObject;
-                TriangleObject["type"]       = "Feature";
-                TriangleObject["properties"] = {{"v0", tri._v[0]}, {"v1", tri._v[1]}, {"v2", tri._v[2]}};
-                TriangleObject["geometry"]   = {{"type", "Polygon"}, {"coordinates", CoorWrapper}};
-                JsonFile["features"].push_back(TriangleObject);
-            }
-            outputTri << JsonFile << std::endl;
+            saveToGeojson(outputTri);
+        }
+        else{
+            std::cerr << "Can't identify the saving file's extension!" << std::endl;
         }
         outputTri.close();
     }
     else
     {
-        std::cerr << "Delaunay triangulation saving path " << outTriFilename << " is not valid! will not save..."
+        std::cerr << "Delaunay triangulation saving path " << OutputFilename << " is not valid! will not save..."
                   << std::endl;
+    }
+}
+
+void TriangulationHandler::saveToGeojson(std::ofstream &outputTri) const{
+    nlohmann::json JsonFile;
+    JsonFile["type"]                      = "FeatureCollection";
+    JsonFile["name"]                      = "left_4_edge_polygon";
+    JsonFile["crs"]["type"]               = "name";
+    JsonFile["crs"]["properties"]["name"] = "urn:ogc:def:crs:EPSG::32601";
+    JsonFile["features"]                  = nlohmann::json::array();
+    for (auto &tri : output.triVec)
+    {
+        nlohmann::json Coor = nlohmann::json::array();
+        Coor.push_back({input.pointVec[tri._v[0]]._p[0],
+                        input.pointVec[tri._v[0]]._p[1],
+                        input.pointVec[tri._v[0]]._p[2]});
+        Coor.push_back({input.pointVec[tri._v[1]]._p[0],
+                        input.pointVec[tri._v[1]]._p[1],
+                        input.pointVec[tri._v[1]]._p[2]});
+        Coor.push_back({input.pointVec[tri._v[2]]._p[0],
+                        input.pointVec[tri._v[2]]._p[1],
+                        input.pointVec[tri._v[2]]._p[2]});
+        nlohmann::json CoorWrapper = nlohmann::json::array();
+        CoorWrapper.push_back(Coor);
+        nlohmann::json TriangleObject;
+        TriangleObject["type"]       = "Feature";
+        TriangleObject["properties"] = {{"v0", tri._v[0]}, {"v1", tri._v[1]}, {"v2", tri._v[2]}};
+        TriangleObject["geometry"]   = {{"type", "Polygon"}, {"coordinates", CoorWrapper}};
+        JsonFile["features"].push_back(TriangleObject);
+    }
+    outputTri << JsonFile << std::endl;
+}
+
+void TriangulationHandler::saveToObj(std::ofstream &outputTri) const{
+    outputTri << std::setprecision(12);
+    double colors[5][3] = {
+        {0.8, 0.2, 0.2},  // Red
+        {0.9, 0.6, 0.2},  // Orange
+        {0.2, 0.8, 0.2},  // Green
+        {0.2, 0.6, 0.9},  // Sky Blue
+        {0.6, 0.2, 0.8}   // Purple
+    };
+    int i = 0;
+    for (const auto &pt : input.pointVec)
+    {
+        double *color = colors[i % 5];
+        outputTri << "v " << pt._p[0] << " " << pt._p[1] << " " << pt._p[2] << " " << color[0] << " "
+                  << color[1] << " " << color[2] << std::endl;
+        ++i;
+    }
+    for (auto &tri : output.triVec)
+    {
+        outputTri << "f " << tri._v[0] + 1 << " " << tri._v[1] + 1 << " " << tri._v[2] + 1 << std::endl;
     }
 }
 

@@ -1,31 +1,26 @@
 #include "../inc/DelaunayChecker.h"
 #include "../inc/json.h"
 
-DelaunayChecker::DelaunayChecker(Input &input, Output &output)
-    : _input(input), _output(output), _predWrapper(_input.pointVec, output.ptInf)
+DelaunayChecker::DelaunayChecker(const Input &inputRef,Output &outputRef)
+    : input(inputRef), output(outputRef), predWrapper(inputRef.pointVec, outputRef.infPt)
 {
 }
 
 size_t DelaunayChecker::getVertexCount() const
 {
-    const TriHVec &triVec = _output.triVec;
-
+    const TriHVec &triVec = output.triVec;
     std::set<int> vertSet;
-
     // Add vertices
-    for (int ti = 0; ti < triVec.size(); ++ti)
+    for (auto tri : triVec)
     {
-        const Tri &tri = triVec[ti];
-
         vertSet.insert(tri._v, tri._v + DEG);
     }
-
     return vertSet.size();
 }
 
 size_t DelaunayChecker::getSegmentCount() const
 {
-    const TriHVec &triVec = _output.triVec;
+    const TriHVec &triVec = output.triVec;
     const int      triNum = (int)triVec.size();
 
     std::set<Edge> segSet;
@@ -43,7 +38,7 @@ size_t DelaunayChecker::getSegmentCount() const
 
 size_t DelaunayChecker::getTriangleCount()
 {
-    return _output.triVec.size();
+    return output.triVec.size();
 }
 
 void DelaunayChecker::checkEuler()
@@ -80,8 +75,8 @@ void printTriAndOpp(int ti, const Tri &tri, const TriOpp &opp)
 
 void DelaunayChecker::checkAdjacency() const
 {
-    const TriHVec    triVec = _output.triVec;
-    const TriOppHVec oppVec = _output.triOppVec;
+    const TriHVec    triVec = output.triVec;
+    const TriOppHVec oppVec = output.triOppVec;
 
     for (int ti0 = 0; ti0 < (int)triVec.size(); ++ti0)
     {
@@ -126,15 +121,13 @@ void DelaunayChecker::checkAdjacency() const
 
 void DelaunayChecker::checkOrientation()
 {
-    const TriHVec triVec = _output.triVec;
+    const TriHVec triVec = output.triVec;
 
     int count = 0;
 
-    for (int i = 0; i < (int)triVec.size(); ++i)
+    for (auto t : triVec)
     {
-        const Tri   &t   = triVec[i];
-        const Orient ord = _predWrapper.doOrient2DFastExactSoS(t._v[0], t._v[1], t._v[2]);
-
+        const Orient ord = predWrapper.doOrient2DFastExactSoS(t._v[0], t._v[1], t._v[2]);
         if (OrientNeg == ord)
             ++count;
     }
@@ -149,8 +142,8 @@ void DelaunayChecker::checkOrientation()
 
 void DelaunayChecker::checkDelaunay()
 {
-    const TriHVec    triVec = _output.triVec;
-    const TriOppHVec oppVec = _output.triOppVec;
+    const TriHVec    triVec = output.triVec;
+    const TriOppHVec oppVec = output.triOppVec;
 
     const int triNum  = (int)triVec.size();
     int       failNum = 0;
@@ -174,7 +167,7 @@ void DelaunayChecker::checkDelaunay()
 
             const Tri  topTri  = triVec[topTi];
             const int  topVert = topTri._v[topVi];
-            const Side side    = _predWrapper.doIncircle(botTri, topVert);
+            const Side side    = predWrapper.doIncircle(botTri, topVert);
 
             if (SideIn != side)
                 continue;
@@ -193,12 +186,12 @@ void DelaunayChecker::checkDelaunay()
 
 void DelaunayChecker::checkConstraints()
 {
-    if (_input.constraintVec.empty())
+    if (input.constraintVec.empty())
         return;
 
-    const TriHVec     triVec  = _output.triVec;
-    TriOppHVec       &oppVec  = _output.triOppVec;
-    const EdgeHVec    consVec = _input.constraintVec;
+    const TriHVec     triVec  = output.triVec;
+    TriOppHVec       &oppVec  = output.triOppVec;
+    const EdgeHVec    consVec = input.constraintVec;
 
     const int triNum  = (int)triVec.size();
     int       failNum = 0;
@@ -210,7 +203,7 @@ void DelaunayChecker::checkConstraints()
                 oppVec[i].setOppConstraint(j, false);
 
     // Create a vertex to triangle map
-    IntHVec vertTriMap(_predWrapper.pointNum(), -1);
+    IntHVec vertTriMap(predWrapper.pointNum(), -1);
 
     for (int i = 0; i < triNum; ++i)
         for (int v : triVec[i]._v)

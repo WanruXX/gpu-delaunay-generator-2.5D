@@ -1,10 +1,10 @@
 #include "../../inc/CPU/PredWrapper.h"
 
-PredWrapper2D::PredWrapper2D() : _pointArr(nullptr), _pointNum(0), _infIdx(0)
+PredWrapper::PredWrapper() : _pointArr(nullptr), _pointNum(0), _infIdx(0)
 {
 }
 
-PredWrapper2D::PredWrapper2D(const Point2DHVec &pointVec, Point ptInfty)
+PredWrapper::PredWrapper(const Point2DHVec &pointVec, Point ptInfty)
 {
     _pointArr = &pointVec[0];
     _pointNum = pointVec.size();
@@ -13,17 +13,17 @@ PredWrapper2D::PredWrapper2D(const Point2DHVec &pointVec, Point ptInfty)
     exactinit();
 }
 
-const Point &PredWrapper2D::getPoint(int idx) const
+const Point &PredWrapper::getPoint(int idx) const
 {
     return (idx == _infIdx) ? _ptInfty : _pointArr[idx];
 }
 
-size_t PredWrapper2D::pointNum() const
+size_t PredWrapper::pointNum() const
 {
     return _pointNum + 1;
 }
 
-Orient PredWrapper2D::doOrient2D(int v0, int v1, int v2) const
+Orient PredWrapper::doOrient2D(int v0, int v1, int v2) const
 {
     assert((v0 != v1) && (v0 != v2) && (v1 != v2) && "Duplicate indices in orientation!");
 
@@ -37,7 +37,7 @@ Orient PredWrapper2D::doOrient2D(int v0, int v1, int v2) const
     return ortToOrient(det);
 }
 
-Orient PredWrapper2D::doOrient2DSoSOnly(const double *p0, const double *p1, const double *p2, int v0, int v1, int v2)
+Orient PredWrapper::doOrient2DSoSOnly(const double *p0, const double *p1, const double *p2, int v0, int v1, int v2)
 {
     ////
     // Sort points using vertex as key, also note their sorted order
@@ -94,7 +94,7 @@ Orient PredWrapper2D::doOrient2DSoSOnly(const double *p0, const double *p1, cons
     return ortToOrient(det);
 }
 
-Orient PredWrapper2D::doOrient2DFastExactSoS(int v0, int v1, int v2) const
+Orient PredWrapper::doOrient2DFastExactSoS(int v0, int v1, int v2) const
 {
     const double *pt[] = {getPoint(v0)._p, getPoint(v1)._p, getPoint(v2)._p};
 
@@ -112,7 +112,7 @@ Orient PredWrapper2D::doOrient2DFastExactSoS(int v0, int v1, int v2) const
 
 ///////////////////////////////////////////////////////////////////// Circle //
 
-Side PredWrapper2D::doIncircle(Tri tri, int vert) const
+Side PredWrapper::doIncircle(Tri tri, int vert) const
 {
     if (vert == _infIdx)
         return SideOut;

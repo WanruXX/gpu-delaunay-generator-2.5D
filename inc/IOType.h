@@ -16,8 +16,8 @@ enum ProfLevel
 
 struct Input
 {
-    Point2DHVec  pointVec;
-    EdgeHVec     constraintVec;
+    Point2DHVec pointVec;
+    EdgeHVec    constraintVec;
 
     bool      insAll    = false; // Insert all before flipping
     bool      noSort    = false; // Sort input points (unused)
@@ -36,11 +36,13 @@ struct Input
 
 struct Output
 {
-    TriHVec           triVec;
-    TriOppHVec        triOppVec;
-    std::set<Edge> segVec;
-    Point             ptInf;
-    Statistics        stats;
+    TriHVec        triVec;
+    TriOppHVec     triOppVec;
+    std::set<Edge> edgeSet;
+    Point          infPt;
+    Statistics     stats;
+
+    void reset();
 };
 
 #endif //DELAUNAY_GENERATOR_IOTYPE_H

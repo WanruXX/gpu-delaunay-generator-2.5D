@@ -2,12 +2,13 @@
 #include "../inc/HashFunctors.h"
 #include <unordered_set>
 
-void Input::removeDuplicates(){
-    Point2DHVec  oldPointVec = std::move(pointVec);
-    EdgeHVec     oldConstraintVec = std::move(constraintVec);
+void Input::removeDuplicates()
+{
+    Point2DHVec oldPointVec      = std::move(pointVec);
+    EdgeHVec    oldConstraintVec = std::move(constraintVec);
 
     std::unordered_set<Point, PointHash> pointSet;
-    std::vector<int>    pointMap(oldPointVec.size());
+    std::vector<int>                     pointMap(oldPointVec.size());
     for (std::size_t i = 0; i < oldPointVec.size(); ++i)
     {
         const auto &pt = oldPointVec[i];
@@ -20,7 +21,7 @@ void Input::removeDuplicates(){
         {
             std::cout << " Duplicate point found at [" << i << "], will remove from indexing!" << std::endl;
         }
-        pointMap[i] = static_cast<int>(pointVec.size()) - 1;;
+        pointMap[i] = static_cast<int>(pointVec.size()) - 1;
     }
 
     std::unordered_set<Edge, EdgeHash, EdgeEqual> edgeSet;
@@ -33,4 +34,13 @@ void Input::removeDuplicates(){
             constraintVec.push_back(edge);
         }
     }
+}
+
+void Output::reset()
+{
+    triVec.clear();
+    triOppVec.clear();
+    edgeSet.clear();
+    stats.reset();
+    infPt = {0, 0, 0};
 }

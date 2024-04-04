@@ -7,17 +7,18 @@
 class DelaunayChecker
 {
   private:
-    Input        &_input;
-    Output       &_output;
+    const Input        &input;
+    Output       &output;
 
-    PredWrapper2D _predWrapper;
+    PredWrapper predWrapper;
 
     size_t getVertexCount() const;
     size_t getSegmentCount() const;
     size_t getTriangleCount();
 
   public:
-    DelaunayChecker(Input &input, Output &output);
+    DelaunayChecker() = delete;
+    DelaunayChecker(const Input &inputRef, Output &outputRef);
     void        checkEuler();
     void        checkAdjacency() const;
     void        checkOrientation();
@@ -25,4 +26,4 @@ class DelaunayChecker
     void        checkConstraints();
 };
 
-#endif //GDEL2D_DELAUNAYCHECKER_H
+#endif //DELAUNAY_GENERATOR_DELAUNAYCHECKER_H

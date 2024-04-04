@@ -77,17 +77,24 @@ enum Side
     SideOut  = +1
 };
 
-INLINE_H_D
-Side cicToSide(double det)
+INLINE_H_D Side cicToSide(double det)
 {
     return (det < 0) ? SideOut : ((det > 0) ? SideIn : SideZero);
 }
 
-INLINE_H_D
-void setTriIdxVi(int &output, int oldVi, int ni, int newVi)
+INLINE_H_D void setTriIdxVi(int &output, int oldVi, int ni, int newVi)
 {
     output -= (0xF) << (oldVi * 4);
     output += ((ni << 2) + newVi) << (oldVi * 4);
+}
+
+INLINE_H_D bool almost_zero(double x)
+{
+    return std::abs(x) < 1e-9;
+}
+
+INLINE_H_D bool almost_equal(double x, double y){
+    return std::abs(x - y) < 1e-9;
 }
 
 struct Point
@@ -115,7 +122,7 @@ struct Point
     INLINE_H_D
     bool operator==(const Point &pt) const
     {
-        return (_p[0] == pt._p[0] && _p[1] == pt._p[1]);
+        return almost_equal(_p[0], pt._p[0]) && almost_equal(_p[1], pt._p[1]);
     }
 
     INLINE_H_D
@@ -156,7 +163,7 @@ struct Tri
 
     INLINE_H_D bool operator==(const Tri &tri) const
     {
-        return (_v[0] == tri._v[0] && _v[1] == tri._v[1] && _v[2] == tri._v[2]);
+        return _v[0] == tri._v[0] && _v[1] == tri._v[1] && _v[2] == tri._v[2];
     }
 
     INLINE_H_D bool operator!=(const Tri &tri) const

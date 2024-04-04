@@ -21,14 +21,14 @@ const double *pd
 )
 ;
 
-class PredWrapper2D
+class PredWrapper
 {
 private:
 	const Point *	_pointArr;
         Point                       _ptInfty;
 	size_t			    _pointNum;
 
-    PredWrapper2D();
+        PredWrapper();
     static Orient doOrient2DSoSOnly(
         const double* p0, const double* p1, const double* p2,
         int v0, int v1, int v2 ) ;
@@ -36,7 +36,7 @@ private:
 public:
     size_t _infIdx;
 
-    PredWrapper2D(const Point2DHVec & pointVec, Point ptInfty);
+    PredWrapper(const Point2DHVec & pointVec, Point ptInfty);
 
 	const Point & getPoint( int idx ) const;
 	size_t pointNum() const;

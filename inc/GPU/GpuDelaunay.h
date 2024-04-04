@@ -11,32 +11,24 @@
 #include "HostToKernel.h"
 #include "SmallCounters.h"
 
-////
-// Consts
-////
-
 constexpr int BlocksPerGrid       = 512;
 constexpr int ThreadsPerBlock     = 128;
 constexpr int PredBlocksPerGrid   = 64;
 constexpr int PredThreadsPerBlock = 32;
-
-////
-// Main class
-////
-
 constexpr int TriSegNum            = 3;
 constexpr int TriSeg[TriSegNum][2] = {{0, 1}, {1, 2}, {2, 0}};
+
 
 class GpuDel
 {
 private:
-    const Input  *_input  = nullptr;
-    Output       *_output = nullptr;
+    const Input  *inputPtr = nullptr;
+    Output       *outputPtr = nullptr;
 
     // Input
     PointDVec   _pointVec;
     EdgeDVec    _constraintVec;
-    int         _pointNum = 0;
+    int         pointNum  = 0;
     int         _triMax   = 0;
     double      _minVal   = 0;
     double      _maxVal   = 0;
@@ -67,31 +59,31 @@ private:
     // Very small
     IntHVec       _orgFlipNum;
     SmallCounters _counters{};
-    Point         _ptInfty;
     int           _infIdx     = 0;
     int           _availPtNum = 0;
-    DPredWrapper  _dPredWrapper;
+    DPredWrapper  dPredWrapper;
 
     // Diagnostic - Only used when enabled
     IntDVec _circleCountVec;
     IntDVec _rejFlipVec;
 
-    Diagnostic  _diagLogCompact, _diagLogCollect;
-    Diagnostic *_diagLog = nullptr;
+    Diagnostic  diagLogCompact, diagLogCollect;
+    Diagnostic *diagLogPtr = nullptr;
 
-    IntHVec _numActiveVec;
-    IntHVec _numFlipVec;
-    IntHVec _numCircleVec;
+    IntHVec numActiveVec;
+    IntHVec numFlipVec;
+    IntHVec numCircleVec;
 
-    RealHVec _timeCheckVec;
-    RealHVec _timeFlipVec;
+    RealHVec timeCheckVec;
+    RealHVec timeFlipVec;
 
     // Timing
     CudaTimer _profTimer[ProfLevelCount];
 
 private:
-    // Helpers
+
     void constructInitialTriangles();
+    Tri setOutputInfPointAndTriangle();
     void markSpecialTris();
     void expandTri(int newTriNum);
     void splitTri();
@@ -126,7 +118,7 @@ private:
     void cleanup();
 
 public:
-    GpuDel() = default;
+    GpuDel();
 
     static void getEdges(const Tri &t, Edge *sArr);
 

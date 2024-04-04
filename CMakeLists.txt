@@ -16,7 +16,8 @@ endif ()
 # https://developer.nvidia.com/cuda-gpus
 set(CUDA_NVCC_FLAGS
         ${CUDA_NVCC_FLAGS};
-        -gencode=arch=compute_86,code=sm_86)
+        -gencode=arch=compute_86,code=sm_86
+        --extended-lambda)
 
 set(${PROJECT_NAME}_SOURCES
         src/DelaunayChecker.cpp
@@ -60,3 +61,7 @@ set(${PROJECT_NAME}_HEADERS
 cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 set(CMAKE_VERBOSE_MAKEFILE "ON")
 target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} yaml-cpp Eigen3::Eigen)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(DDEBUG)
+endif()

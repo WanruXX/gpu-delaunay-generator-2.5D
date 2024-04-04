@@ -21,8 +21,6 @@ InputConstraintFile: ""
 PointNum: 1000
 # Choose among {"Uniform", "Gaussian", "Disk", "ThinCircle", "Circle", "Grid", "Ellipse", "TwoLines"}
 DistributionType: "Uniform"
-# Number of constraints
-ConstraintNum: -1
 # Initial seed
 Seed: 76213898
 # Save randomly generated points
@@ -45,6 +43,6 @@ ProfLevel: "Default"
 DoCheck: false
 
 # Output check/triangulation result
-OutputResult: true
+OutputTriangles: true
 # Choose among {".geojson", ".obj"}
-OutputMeshPath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/slice_138.obj"
+OutputTrianglePath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/slice_138.obj"
