@@ -589,7 +589,7 @@ __forceinline__ __device__ void markTriConsIntersection(KerIntArray actConsVec,
             //if ( consIdx == 1176931 )
             //    printf("--> %d_i ", nextVert);
 
-            //CudaAssert( nextVert != dPredWrapper._infIdx );
+            //CudaAssert( nextVert != dPredWrapper.infIdx );
 
             if (nextVert == constraint._v[1]) // Reach the end
             {

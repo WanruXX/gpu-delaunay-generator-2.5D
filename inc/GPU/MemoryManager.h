@@ -15,10 +15,10 @@ class DevVector
     using DevPtr = thrust::device_ptr<T>;
 
     // Properties
-    DevPtr                _ptr;
-    size_t                _size     = 0;
-    size_t                _capacity = 0;
-    bool                  _owned = true;
+    DevPtr _ptr;
+    size_t _size     = 0;
+    size_t _capacity = 0;
+    bool   _owned    = true;
 
     DevVector() = default;
 
@@ -95,12 +95,10 @@ class DevVector
         }
         catch (...)
         {
-            // output an error message and exit
             const int OneMB = (1 << 20);
-            std::cerr << "thrust::device_malloc failed to allocate " << (sizeof(T) * _capacity) / OneMB << " MB!"
-                      << std::endl;
-            std::cerr << "size = " << _size << " sizeof(T) = " << sizeof(T) << std::endl;
-            exit(-1);
+            throw(std::runtime_error(
+                "thrust::device_malloc failed to allocate " + std::to_string((sizeof(T) * _capacity) / OneMB) +
+                " MB!\nsize=" + std::to_string(_size) + " sizeof(T)=" + std::to_string(sizeof(T))));
         }
     }
 
@@ -270,7 +268,6 @@ class MemoryPool
         if (bufIdx == -1)
         {
             std::cout << "MemoryPool: Allocating " << sizeInBytes << std::endl;
-
             bufIdx = reserve<T>(size);
         }
 
@@ -282,7 +279,7 @@ class MemoryPool
         vec._owned    = false;
 
         //std::cout << "MemoryPool: Requesting "
-        //    << sizeInBytes << ", giving " << _memPool[ bufIdx ].sizeInBytes << std::endl;
+        //    << sizeInBytes << ", giving " << memPool[ bufIdx ].sizeInBytes << std::endl;
 
         // Disable the buffer in the pool
         if (!tempOnly)
@@ -303,7 +300,7 @@ class MemoryPool
                 // Return the buffer to the pool
                 i.avail = true;
 
-                //std::cout << "MemoryPool: Returning " << _memPool[d_i].sizeInBytes << std::endl;
+                //std::cout << "MemoryPool: Returning " << memPool[d_i].sizeInBytes << std::endl;
 
                 // Reset the vector to 0 size
                 vec.free();
