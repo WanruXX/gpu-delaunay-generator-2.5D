@@ -44,3 +44,12 @@ void Output::reset()
     stats.reset();
     infPt = {0, 0, 0};
 }
+
+void Output::getEdgesFromTriVec(){
+    for (auto & tri : triVec)
+    {
+        edgeSet.insert({tri._v[0], tri._v[1]});
+        edgeSet.insert({tri._v[0], tri._v[2]});
+        edgeSet.insert({tri._v[1], tri._v[2]});
+    }
+}

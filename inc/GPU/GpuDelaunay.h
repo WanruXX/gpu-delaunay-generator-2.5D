@@ -83,24 +83,29 @@ class GpuDel
     void splitAndFlip();
 
     void splitTri();
-    IntDVec getRankedPoints(int triNum, int noSample);
+    void getRankedPoints(int triNum, int noSample, IntDVec &triToVert);
     void shiftTriIfNeed(int &triNum, IntDVec &triToVert, IntDVec &splitTriVec);
     void shiftTri(IntDVec &triToVert, IntDVec &splitTriVec);
     template <typename T>
     void shiftExpandVec(IntDVec &shiftVec, DevVector<T> &dataVec, int size);
     void shiftOppVec(IntDVec &shiftVec, TriOppDVec &dataVec, int size);
-    IntDVec makeTriMap(int triNum, const IntDVec &splitTriVec, int splitTriNum);
+    void makeTriMap(int splitTriNum, int triNum, const IntDVec &splitTriVec, IntDVec &insTriMap);
     void expandTri(int newTriNum);
-    void relocatePoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap);
+    void splitPoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap);
     void splitOldTriIntoNew(int triNum, IntDVec &triToVert, IntDVec &splitTriVec, IntDVec &insTriMap);
 
     void flipLoop(CheckDelaunayMode checkMode);
     bool flip(CheckDelaunayMode checkMode);
     void compactActiveTriangles();
     void selectMode(int triNum, int orgActNum);
-    IntDVec getTriVotes(CheckDelaunayMode &checkMode, int triNum, int orgActNum);
+    int  getFlipNum(CheckDelaunayMode checkMode, int triNum, int orgActNum, IntDVec &triVoteVec);
+    void getTriVotes(CheckDelaunayMode checkMode, int triNum, int orgActNum, IntDVec &triVoteVec);
     void dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, IntDVec &triVoteVec);
+    int  getOriginalFlipNumAndExpandFlipVec(int flipNum);
+    void doFlippingAndUpdateOppTri(int orgActNum, int flipNum, IntDVec &flipToTri);
     void relocateAll();
+    void rebuildTriPtrAfterFlipping(IntDVec &triToFlip);
+    void relocatePoints(IntDVec &triToFlip);
 
     void markSpecialTris();
     void insertConstraints();
@@ -109,6 +114,8 @@ class GpuDel
     bool flipConstraints(int &flipNum);
     void updatePairStatus();
     void checkConsFlipping(IntDVec &triVoteVec);
+    void updateFlipConsNum(int &flipNum, IntDVec &triVoteVec, IntDVec &flipToTri);
+    void doFlippingAndUpdateOppTri(int flipNum, int orgFlipNum, int expFlipNum, IntDVec &flipToTri);
 
     void outputToHost();
     void compactTris();
@@ -123,14 +130,7 @@ class GpuDel
   public:
     GpuDel();
 
-    static void getEdges(const Tri &t, Edge *sArr);
-
     void compute(const Input &input, Output &output);
-
-
 };
-
-//constexpr int GpuDel::TriSegNum;
-//constexpr int GpuDel::TriSeg[3][2];
 
 #endif //DELAUNAY_GENERATOR_GPUDELAUNAYC_H

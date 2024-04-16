@@ -382,7 +382,7 @@ struct Edge
 
     INLINE_H_D bool operator==(const Edge &edge) const
     {
-        return ((_v[0] == edge._v[0]) && (_v[1] == edge._v[1]));
+        return (_v[0] == edge._v[0] && _v[1] == edge._v[1]) || (_v[0] == edge._v[0] && _v[1] == edge._v[1]);
     }
 
     INLINE_H_D bool operator!=(const Edge &edge) const

@@ -43,6 +43,8 @@ struct Output
     Statistics     stats;
 
     void reset();
+
+    void getEdgesFromTriVec();
 };
 
 #endif //DELAUNAY_GENERATOR_IOTYPE_H

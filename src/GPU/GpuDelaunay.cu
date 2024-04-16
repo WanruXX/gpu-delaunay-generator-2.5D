@@ -16,6 +16,7 @@ struct CompareX
         return a._p[0] < b._p[0];
     }
 };
+
 struct Get2Ddist
 {
     Point  _a;
@@ -37,6 +38,7 @@ struct Get2Ddist
         return __float_as_int(fabs((float)dist));
     }
 };
+
 template <typename T>
 __global__ void kerShift(KerIntArray shiftVec, T *src, T *dest)
 {
@@ -308,12 +310,14 @@ void GpuDel::splitTri()
 {
     startTiming(ProfDefault);
 
+    IntDVec triToVert   = memPool.allocateAny<int>(triMaxNum);
+    IntDVec splitTriVec = memPool.allocateAny<int>(pointNum);
+    IntDVec insTriMap   = memPool.allocateAny<int>(triMaxNum);
+
     auto triNum   = static_cast<int>(triVec.size());
     int  noSample = pointNum / triNum > MaxSamplePerTri ? triNum * MaxSamplePerTri : pointNum;
-
-    IntDVec triToVert   = getRankedPoints(triNum, noSample);
-    IntDVec splitTriVec = memPool.allocateAny<int>(pointNum);
-    insertTriNum        = thrust_copyIf_TriHasVert(triToVert, splitTriVec);
+    getRankedPoints(triNum, noSample, triToVert);
+    insertTriNum = thrust_copyIf_TriHasVert(triToVert, splitTriVec);
 
     const int splitTriNum = triNum + DIM * insertTriNum;
     if (inputPtr->isProfiling(ProfDiag))
@@ -321,10 +325,10 @@ void GpuDel::splitTri()
         std::cout << "Insert: " << insertTriNum << " Tri from: " << triNum << " to: " << splitTriNum << std::endl;
     }
     shiftTriIfNeed(triNum, triToVert, splitTriVec);
-
-    IntDVec insTriMap = makeTriMap(triNum, splitTriVec, splitTriNum);
+    makeTriMap(splitTriNum, triNum, splitTriVec, insTriMap);
     stopTiming(ProfDefault, outputPtr->stats.splitTime);
-    relocatePoints(triNum, triToVert, insTriMap);
+
+    splitPoints(triNum, triToVert, insTriMap);
     splitOldTriIntoNew(triNum, triToVert, splitTriVec, insTriMap);
 
     memPool.release(triToVert);
@@ -333,7 +337,7 @@ void GpuDel::splitTri()
     availPtNum -= insertTriNum;
 }
 
-IntDVec GpuDel::getRankedPoints(int triNum, int noSample)
+void GpuDel::getRankedPoints(int triNum, int noSample, IntDVec &triToVert)
 {
     IntDVec triCircleVec = memPool.allocateAny<int>(triMaxNum);
     triCircleVec.assign(triNum, INT_MIN);
@@ -345,8 +349,6 @@ IntDVec GpuDel::getRankedPoints(int triNum, int noSample)
                                                         toKernelPtr(triCircleVec),
                                                         noSample);
     CudaCheckError();
-
-    IntDVec triToVert = memPool.allocateAny<int>(triMaxNum);
     triToVert.assign(triNum, INT_MAX);
     kerPickWinnerPoint<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(vertexTriVec),
                                                            toKernelPtr(vertCircleVec),
@@ -354,10 +356,8 @@ IntDVec GpuDel::getRankedPoints(int triNum, int noSample)
                                                            toKernelPtr(triToVert),
                                                            noSample);
     CudaCheckError();
-
     memPool.release(vertCircleVec);
     memPool.release(triCircleVec);
-    return triToVert;
 }
 
 void GpuDel::shiftTriIfNeed(int &triNum, IntDVec &triToVert, IntDVec &splitTriVec)
@@ -417,13 +417,11 @@ void GpuDel::shiftOppVec(IntDVec &shiftVec, TriOppDVec &dataVec, int size)
     memPool.release(tempVec);
 }
 
-IntDVec GpuDel::makeTriMap(int triNum, const IntDVec &splitTriVec, const int splitTriNum)
+void GpuDel::makeTriMap(int splitTriNum, int triNum, const IntDVec &splitTriVec, IntDVec &insTriMap)
 {
-    IntDVec insTriMap = memPool.allocateAny<int>(triMaxNum);
     insTriMap.assign((triNum < 0) ? splitTriNum : triNum, -1);
     thrust_scatterSequenceMap(splitTriVec, insTriMap);
     expandTri(splitTriNum);
-    return insTriMap;
 }
 
 void GpuDel::expandTri(int newTriNum)
@@ -433,7 +431,7 @@ void GpuDel::expandTri(int newTriNum)
     triInfoVec.expand(newTriNum);
 }
 
-void GpuDel::relocatePoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap)
+void GpuDel::splitPoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap)
 {
     startTiming(ProfDefault);
     IntDVec exactCheckVec = memPool.allocateAny<int>(pointNum);
@@ -523,43 +521,19 @@ bool GpuDel::flip(CheckDelaunayMode checkMode)
     restartTiming(ProfDetail, diagLogPtr->_t[0]);
 
     // No more work
-    if (0 == orgActNum){
+    if (0 == orgActNum)
+    {
         return false;
     }
     // Little work, leave it for the Exact iterations
-    if (checkMode != CircleExactOrientSoS && orgActNum < PredBlocksPerGrid * PredThreadsPerBlock){
+    if (checkMode != CircleExactOrientSoS && orgActNum < PredBlocksPerGrid * PredThreadsPerBlock)
+    {
         return false;
     }
     selectMode(triNum, orgActNum);
-    IntDVec triVoteVec = getTriVotes(checkMode, triNum, orgActNum);
 
-    double prevTime = diagLogPtr->_t[1];
-    restartTiming(ProfDetail, diagLogPtr->_t[1]);
-
-    // Mark rejected flips
-    IntDVec flipToTri = memPool.allocateAny<int>(triMaxNum);
-    flipToTri.resize(orgActNum);
-
-    kerMarkRejectedFlips<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(actTriVec),
-                                                             toKernelPtr(oppVec),
-                                                             toKernelPtr(triVoteVec),
-                                                             toKernelPtr(triInfoVec),
-                                                             toKernelPtr(flipToTri),
-                                                             orgActNum,
-                                                             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec)
-                                                                                             : nullptr);
-    CudaCheckError();
-    memPool.release(triVoteVec);
-
-    restartTiming(ProfDetail, diagLogPtr->_t[2]);
-    // Compact flips
-    IntDVec   temp    = memPool.allocateAny<int>(triMaxNum, true);
-    const int flipNum = compactIfNegative(flipToTri, temp);
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        numFlipVec.push_back(flipNum);
-        timeCheckVec.push_back(diagLogPtr->_t[1] - prevTime);
-    }
+    IntDVec   flipToTri = memPool.allocateAny<int>(triMaxNum);
+    const int flipNum   = getFlipNum(checkMode, triNum, orgActNum, flipToTri);
 
     restartTiming(ProfDetail, diagLogPtr->_t[3]);
 
@@ -586,74 +560,10 @@ bool GpuDel::flip(CheckDelaunayMode checkMode)
         return false;
     }
 
-    // Expand flip vector
-    auto orgFlipNum = static_cast<int>(flipVec.size());
-    int  expFlipNum = orgFlipNum + flipNum;
-
-    if (expFlipNum > flipVec.capacity())
-    {
-        stopTiming(ProfDetail, diagLogPtr->_t[4]);
-        stopTiming(ProfDefault, outputPtr->stats.flipTime);
-        relocateAll();
-        startTiming(ProfDefault);
-        startTiming(ProfDetail);
-
-        orgFlipNum = 0;
-        expFlipNum = flipNum;
-    }
-
-    flipVec.grow(expFlipNum);
-
-    // triMsgVec contains two components.
-    // - .x is the encoded new neighbor information
-    // - .y is the flipIdx as in the flipVec (d_i.e. globIdx)
-    // As such, we do not need to initialize it to -1 to
-    // know which tris are not flipped in the current rount.
-    // We can rely on the flipIdx being > or < than orgFlipIdx.
-    // Note that we have to initialize everything to -1
-    // when we clear the flipVec and reset the flip indexing.
-    //
-    triMsgVec.resize(triVec.size());
-
-    // Expand active tri vector
-    if (actTriMode == ActTriCollectCompact)
-    {
-        actTriVec.grow(orgActNum + flipNum);
-    }
-    restartTiming(ProfDetail, diagLogPtr->_t[4]);
-
-    // Flipping, 32 ThreadsPerBlock is optimal
-    kerFlip<<<BlocksPerGrid, 32>>>(toKernelArray(flipToTri),
-                                   toKernelPtr(triVec),
-                                   toKernelPtr(oppVec),
-                                   toKernelPtr(triInfoVec),
-                                   toKernelPtr(triMsgVec),
-                                   (actTriMode == ActTriCollectCompact) ? toKernelPtr(actTriVec) : nullptr,
-                                   toKernelPtr(flipVec),
-                                   nullptr,
-                                   nullptr,
-                                   orgFlipNum,
-                                   orgActNum);
-    CudaCheckError();
-
-    originalFlipNum.push_back(orgFlipNum);
-
-    // Update oppTri
-    kerUpdateOpp<<<BlocksPerGrid, 32>>>(toKernelPtr(flipVec) + orgFlipNum,
-                                        toKernelPtr(oppVec),
-                                        toKernelPtr(triMsgVec),
-                                        toKernelPtr(flipToTri),
-                                        orgFlipNum,
-                                        flipNum);
-    CudaCheckError();
+    originalFlipNum.push_back(getOriginalFlipNumAndExpandFlipVec(flipNum));
+    doFlippingAndUpdateOppTri(orgActNum, flipNum, flipToTri);
 
     memPool.release(flipToTri);
-    prevTime = diagLogPtr->_t[5];
-    stopTiming(ProfDetail, diagLogPtr->_t[5]);
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        timeFlipVec.push_back(diagLogPtr->_t[5] - prevTime);
-    }
     return true;
 }
 
@@ -686,17 +596,44 @@ void GpuDel::selectMode(const int triNum, int orgActNum)
     }
 }
 
-IntDVec GpuDel::getTriVotes(CheckDelaunayMode &checkMode, int triNum, int orgActNum)
+int GpuDel::getFlipNum(CheckDelaunayMode checkMode, int triNum, int orgActNum, IntDVec &flipToTri)
+{
+    IntDVec triVoteVec = memPool.allocateAny<int>(triMaxNum);
+    getTriVotes(checkMode, triNum, orgActNum, triVoteVec);
+    double prevTime = diagLogPtr->_t[1];
+    restartTiming(ProfDetail, diagLogPtr->_t[1]);
+    flipToTri.resize(orgActNum);
+    kerMarkRejectedFlips<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(actTriVec),
+                                                             toKernelPtr(oppVec),
+                                                             toKernelPtr(triVoteVec),
+                                                             toKernelPtr(triInfoVec),
+                                                             toKernelPtr(flipToTri),
+                                                             orgActNum,
+                                                             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec)
+                                                                                             : nullptr);
+    CudaCheckError();
+    memPool.release(triVoteVec);
+
+    restartTiming(ProfDetail, diagLogPtr->_t[2]);
+    IntDVec   temp    = memPool.allocateAny<int>(triMaxNum, true);
+    const int flipNum = compactIfNegative(flipToTri, temp);
+    if (inputPtr->isProfiling(ProfDiag))
+    {
+        numFlipVec.push_back(flipNum);
+        timeCheckVec.push_back(diagLogPtr->_t[1] - prevTime);
+    }
+    return flipNum;
+}
+
+void GpuDel::getTriVotes(CheckDelaunayMode checkMode, int triNum, int orgActNum, IntDVec &triVoteVec)
 {
     if (inputPtr->isProfiling(ProfDiag))
     {
         circleCountVec.assign(triNum, 0);
         rejFlipVec.assign(triNum, 0);
     }
-    IntDVec triVoteVec = memPool.allocateAny<int>(triMaxNum);
     triVoteVec.assign(triNum, INT_MAX);
     dispatchCheckDelaunay(checkMode, orgActNum, triVoteVec);
-    return triVoteVec;
 }
 
 void GpuDel::dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, IntDVec &triVoteVec)
@@ -714,13 +651,10 @@ void GpuDel::dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, I
             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
         CudaCheckError();
         break;
-
     case CircleExactOrientSoS:
         // Reuse this array to save memory
         Int2DVec &exactCheckVi = triMsgVec;
-
         counters.renew();
-
         kerCheckDelaunayExact_Fast<<<BlocksPerGrid, ThreadsPerBlock>>>(
             toKernelPtr(actTriVec),
             toKernelPtr(triVec),
@@ -731,7 +665,6 @@ void GpuDel::dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, I
             orgActNum,
             counters.ptr(),
             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
-
         kerCheckDelaunayExact_Exact<<<PredBlocksPerGrid, PredThreadsPerBlock>>>(
             toKernelPtr(triVec),
             toKernelPtr(oppVec),
@@ -740,59 +673,94 @@ void GpuDel::dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, I
             counters.ptr(),
             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
         CudaCheckError();
-
         break;
+    }
+}
+
+int GpuDel::getOriginalFlipNumAndExpandFlipVec(const int flipNum)
+{
+    auto orgFlipNum = static_cast<int>(flipVec.size());
+    int  expFlipNum = orgFlipNum + flipNum;
+
+    if (expFlipNum > flipVec.capacity())
+    {
+        stopTiming(ProfDetail, diagLogPtr->_t[4]);
+        stopTiming(ProfDefault, outputPtr->stats.flipTime);
+        relocateAll();
+        startTiming(ProfDefault);
+        startTiming(ProfDetail);
+
+        orgFlipNum = 0;
+        expFlipNum = flipNum;
+    }
+
+    flipVec.grow(expFlipNum);
+    return orgFlipNum;
+}
+
+void GpuDel::doFlippingAndUpdateOppTri(int orgActNum, int flipNum, IntDVec &flipToTri)
+{
+    // triMsgVec contains two components.
+    // - .x is the encoded new neighbor information
+    // - .y is the flipIdx as in the flipVec (d_i.e. globIdx)
+    // As such, we do not need to initialize it to -1 to
+    // know which tris are not flipped in the current rount.
+    // We can rely on the flipIdx being > or < than orgFlipIdx.
+    // Note that we have to initialize everything to -1
+    // when we clear the flipVec and reset the flip indexing.
+    //
+    triMsgVec.resize(triVec.size());
+    if (actTriMode == ActTriCollectCompact)
+    {
+        actTriVec.grow(orgActNum + flipNum);
+    }
+    restartTiming(ProfDetail, diagLogPtr->_t[4]);
+
+    // Flipping, 32 ThreadsPerBlock is optimal
+    kerFlip<<<BlocksPerGrid, 32>>>(toKernelArray(flipToTri),
+                                   toKernelPtr(triVec),
+                                   toKernelPtr(oppVec),
+                                   toKernelPtr(triInfoVec),
+                                   toKernelPtr(triMsgVec),
+                                   (actTriMode == ActTriCollectCompact) ? toKernelPtr(actTriVec) : nullptr,
+                                   toKernelPtr(flipVec),
+                                   nullptr,
+                                   nullptr,
+                                   originalFlipNum.back(),
+                                   orgActNum);
+    CudaCheckError();
+
+    // Update oppTri
+    kerUpdateOpp<<<BlocksPerGrid, 32>>>(toKernelPtr(flipVec) + originalFlipNum.back(),
+                                        toKernelPtr(oppVec),
+                                        toKernelPtr(triMsgVec),
+                                        toKernelPtr(flipToTri),
+                                        originalFlipNum.back(),
+                                        flipNum);
+    CudaCheckError();
+    double prevTime = diagLogPtr->_t[5];
+    stopTiming(ProfDetail, diagLogPtr->_t[5]);
+    if (inputPtr->isProfiling(ProfDiag))
+    {
+        timeFlipVec.push_back(diagLogPtr->_t[5] - prevTime);
     }
 }
 
 void GpuDel::relocateAll()
 {
     if (flipVec.size() == 0)
+    {
         return;
+    }
 
     startTiming(ProfDefault);
 
     if (availPtNum > 0)
     {
-        const auto triNum = static_cast<int>(triVec.size());
-
         IntDVec triToFlip = memPool.allocateAny<int>(triMaxNum);
-        triToFlip.assign(triNum, -1);
-
-        // Rebuild the pointers from back to forth
-        auto nextFlipNum = static_cast<int>(flipVec.size());
-
-        for (int i = static_cast<int>(originalFlipNum.size()) - 1; i >= 0; --i)
-        {
-            int prevFlipNum = originalFlipNum[i];
-            int flipNum     = nextFlipNum - prevFlipNum;
-
-            kerUpdateFlipTrace<<<BlocksPerGrid, ThreadsPerBlock>>>(
-                toKernelPtr(flipVec), toKernelPtr(triToFlip), prevFlipNum, flipNum);
-
-            nextFlipNum = prevFlipNum;
-        }
-        CudaCheckError();
-
-        // Relocate points
-        IntDVec exactCheckVec = memPool.allocateAny<int>(pointNum);
-
-        counters.renew();
-
-        kerRelocatePointsFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(vertexTriVec),
-                                                                  toKernelPtr(triToFlip),
-                                                                  toKernelPtr(flipVec),
-                                                                  toKernelPtr(exactCheckVec),
-                                                                  counters.ptr());
-
-        kerRelocatePointsExact<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(vertexTriVec),
-                                                                   toKernelPtr(triToFlip),
-                                                                   toKernelPtr(flipVec),
-                                                                   toKernelPtr(exactCheckVec),
-                                                                   counters.ptr());
-        CudaCheckError();
-
-        memPool.release(exactCheckVec);
+        triToFlip.assign(triVec.size(), -1);
+        rebuildTriPtrAfterFlipping(triToFlip);
+        relocatePoints(triToFlip);
         memPool.release(triToFlip);
     }
 
@@ -802,8 +770,42 @@ void GpuDel::relocateAll()
 
     // Reset the triMsgVec
     triMsgVec.assign(triMaxNum, make_int2(-1, -1));
-
     stopTiming(ProfDefault, outputPtr->stats.relocateTime);
+}
+
+void GpuDel::rebuildTriPtrAfterFlipping(IntDVec &triToFlip)
+{
+    auto nextFlipNum = static_cast<int>(flipVec.size());
+    for (int i = static_cast<int>(originalFlipNum.size()) - 1; i >= 0; --i)
+    {
+        int prevFlipNum = originalFlipNum[i];
+        int flipNum     = nextFlipNum - prevFlipNum;
+
+        kerUpdateFlipTrace<<<BlocksPerGrid, ThreadsPerBlock>>>(
+            toKernelPtr(flipVec), toKernelPtr(triToFlip), prevFlipNum, flipNum);
+
+        nextFlipNum = prevFlipNum;
+    }
+    CudaCheckError();
+}
+
+void GpuDel::relocatePoints(IntDVec &triToFlip)
+{
+    IntDVec exactCheckVec = memPool.allocateAny<int>(pointNum);
+    counters.renew();
+    kerRelocatePointsFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(vertexTriVec),
+                                                              toKernelPtr(triToFlip),
+                                                              toKernelPtr(flipVec),
+                                                              toKernelPtr(exactCheckVec),
+                                                              counters.ptr());
+
+    kerRelocatePointsExact<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(vertexTriVec),
+                                                               toKernelPtr(triToFlip),
+                                                               toKernelPtr(flipVec),
+                                                               toKernelPtr(exactCheckVec),
+                                                               counters.ptr());
+    CudaCheckError();
+    memPool.release(exactCheckVec);
 }
 
 void GpuDel::markSpecialTris()
@@ -819,16 +821,12 @@ void GpuDel::insertConstraints()
     startTiming(ProfDefault);
 
     initForConstraintInsertion();
+    triConsVec = memPool.allocateAny<int>(triVec.size());
+    flipVec    = memPool.allocateAny<FlipItem>(triMaxNum);
+    triMsgVec  = memPool.allocateAny<int2>(triMaxNum);
+    actTriVec  = memPool.allocateAny<int>(triMaxNum);
 
-    const auto triNum = static_cast<int>(triVec.size());
-
-    triConsVec = memPool.allocateAny<int>(triNum);
-    triConsVec.assign(triNum, -1);
-
-    flipVec   = memPool.allocateAny<FlipItem>(triMaxNum);
-    triMsgVec = memPool.allocateAny<int2>(triMaxNum);
-    actTriVec = memPool.allocateAny<int>(triMaxNum);
-
+    triConsVec.assign(triVec.size(), -1);
     triMsgVec.assign(triMaxNum, make_int2(-1, -1));
 
     int outerLoop  = 0;
@@ -897,7 +895,6 @@ void GpuDel::initForConstraintInsertion()
 bool GpuDel::markIntersections()
 {
     counters.renew();
-
     kerMarkTriConsIntersectionFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(actConsVec),
                                                                        toKernelPtr(constraintVec),
                                                                        toKernelPtr(triVec),
@@ -906,7 +903,7 @@ bool GpuDel::markIntersections()
                                                                        toKernelPtr(vertexTriVec),
                                                                        toKernelPtr(triConsVec),
                                                                        counters.ptr());
-
+    CudaCheckError();
     kerMarkTriConsIntersectionExact<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(actConsVec),
                                                                         toKernelPtr(constraintVec),
                                                                         toKernelPtr(triVec),
@@ -916,47 +913,28 @@ bool GpuDel::markIntersections()
                                                                         toKernelPtr(triConsVec),
                                                                         counters.ptr());
     CudaCheckError();
-
     return (counters[CounterFlag] == 1);
 }
 
 bool GpuDel::flipConstraints(int &flipNum)
 {
-    const auto triNum = static_cast<int>(triVec.size());
-    const auto actNum = static_cast<int>(actTriVec.size());
+    const auto triNum = triVec.size();
+    const auto actNum = actTriVec.size();
 
     // Vote for flips
     if (inputPtr->isProfiling(ProfDiag))
     {
         rejFlipVec.assign(triNum, 0);
     }
-
     updatePairStatus();
+
     IntDVec triVoteVec = memPool.allocateAny<int>(triMaxNum);
     triVoteVec.assign(triNum, INT_MAX);
     checkConsFlipping(triVoteVec);
-
-    ////
-    // Mark rejected flips
-    ////
     IntDVec flipToTri = memPool.allocateAny<int>(triMaxNum);
-
     flipToTri.resize(actNum);
-
-    kerMarkRejectedConsFlips<<<BlocksPerGrid, ThreadsPerBlock>>>(
-        toKernelArray(actTriVec),
-        toKernelPtr(triConsVec),
-        toKernelPtr(triVoteVec),
-        toKernelPtr(triInfoVec),
-        toKernelPtr(oppVec),
-        toKernelPtr(flipToTri),
-        inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec) : nullptr);
-    CudaCheckError();
+    updateFlipConsNum(flipNum, triVoteVec, flipToTri);
     memPool.release(triVoteVec);
-
-    // Compact flips
-    IntDVec temp = memPool.allocateAny<int>(triMaxNum, true);
-    flipNum      = compactIfNegative(flipToTri, temp);
 
     if (0 == flipNum)
     {
@@ -964,7 +942,6 @@ bool GpuDel::flipConstraints(int &flipNum)
         return false;
     }
 
-    // Expand flip vector
     auto orgFlipNum = static_cast<int>(flipVec.size());
     int  expFlipNum = orgFlipNum + flipNum;
 
@@ -976,12 +953,15 @@ bool GpuDel::flipConstraints(int &flipNum)
         expFlipNum = flipNum;
     }
 
-    flipVec.grow(expFlipNum);
+    doFlippingAndUpdateOppTri(flipNum, orgFlipNum, expFlipNum, flipToTri);
+    memPool.release(flipToTri);
+    return true;
+}
 
-    // See doFlipping
+void GpuDel::doFlippingAndUpdateOppTri(int flipNum, int orgFlipNum, int expFlipNum, IntDVec &flipToTri)
+{
     triMsgVec.resize(triVec.size());
-
-    // Flipping
+    flipVec.grow(expFlipNum);
     if (inputPtr->isProfiling(ProfDiag))
     {
         const int rejFlipNum = thrust_sum(rejFlipVec);
@@ -1000,8 +980,6 @@ bool GpuDel::flipConstraints(int &flipNum)
                                    orgFlipNum,
                                    0);
     CudaCheckError();
-
-    // Update oppTri
     kerUpdateOpp<<<BlocksPerGrid, 32>>>(toKernelPtr(flipVec) + orgFlipNum,
                                         toKernelPtr(oppVec),
                                         toKernelPtr(triMsgVec),
@@ -1009,17 +987,12 @@ bool GpuDel::flipConstraints(int &flipNum)
                                         orgFlipNum,
                                         flipNum);
     CudaCheckError();
-    memPool.release(flipToTri);
-
-    return true;
 }
 
 void GpuDel::updatePairStatus()
 {
     IntDVec exactVec = memPool.allocateAny<int>(triMaxNum);
-
     counters.renew();
-
     kerUpdatePairStatusFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(actTriVec),
                                                                 toKernelPtr(triConsVec),
                                                                 toKernelPtr(triVec),
@@ -1027,7 +1000,7 @@ void GpuDel::updatePairStatus()
                                                                 toKernelPtr(triInfoVec),
                                                                 toKernelPtr(exactVec),
                                                                 counters.ptr());
-
+    CudaCheckError();
     kerUpdatePairStatusExact<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(actTriVec),
                                                                  toKernelPtr(triConsVec),
                                                                  toKernelPtr(triVec),
@@ -1036,16 +1009,13 @@ void GpuDel::updatePairStatus()
                                                                  toKernelPtr(exactVec),
                                                                  counters.ptr());
     CudaCheckError();
-
     memPool.release(exactVec);
 }
 
 void GpuDel::checkConsFlipping(IntDVec &triVoteVec)
 {
     IntDVec exactVec = memPool.allocateAny<int>(triMaxNum);
-
     counters.renew();
-
     kerCheckConsFlippingFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(actTriVec),
                                                                  toKernelPtr(triConsVec),
                                                                  toKernelPtr(triInfoVec),
@@ -1054,7 +1024,7 @@ void GpuDel::checkConsFlipping(IntDVec &triVoteVec)
                                                                  toKernelPtr(triVoteVec),
                                                                  toKernelPtr(exactVec),
                                                                  counters.ptr());
-
+    CudaCheckError();
     kerCheckConsFlippingExact<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(triConsVec),
                                                                   toKernelPtr(triInfoVec),
                                                                   toKernelPtr(triVec),
@@ -1063,8 +1033,23 @@ void GpuDel::checkConsFlipping(IntDVec &triVoteVec)
                                                                   toKernelPtr(exactVec),
                                                                   counters.ptr());
     CudaCheckError();
-
     memPool.release(exactVec);
+}
+
+void GpuDel::updateFlipConsNum(int &flipNum, IntDVec &triVoteVec, IntDVec &flipToTri)
+{
+    kerMarkRejectedConsFlips<<<BlocksPerGrid, ThreadsPerBlock>>>(
+        toKernelArray(actTriVec),
+        toKernelPtr(triConsVec),
+        toKernelPtr(triVoteVec),
+        toKernelPtr(triInfoVec),
+        toKernelPtr(oppVec),
+        toKernelPtr(flipToTri),
+        inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec) : nullptr);
+    CudaCheckError();
+
+    IntDVec temp = memPool.allocateAny<int>(triMaxNum, true);
+    flipNum      = compactIfNegative(flipToTri, temp);
 }
 
 void GpuDel::outputToHost()
@@ -1089,17 +1074,6 @@ void GpuDel::outputToHost()
     oppVec.copyToHost(outputPtr->triOppVec);
 
     stopTiming(ProfDefault, outputPtr->stats.outTime);
-
-    const int triNum = (int)triVec.size();
-    // Read segments
-    Edge segArr[TriSegNum];
-    for (int ti = 0; ti < triNum; ++ti)
-    {
-        const Tri &tri = triVec[ti];
-        getEdges(tri, segArr);
-        outputPtr->edgeSet.insert(segArr, segArr + TriSegNum);
-    }
-
     std::cout << "# Triangles:     " << triVec.size() << std::endl;
 }
 
@@ -1108,27 +1082,21 @@ void GpuDel::compactTris()
     const auto triNum = static_cast<int>(triVec.size());
 
     IntDVec prefixVec = memPool.allocateAny<int>(triMaxNum);
-
     prefixVec.resize(triNum);
-
     thrust_scan_TriAliveStencil(triInfoVec, prefixVec);
 
     int newTriNum = prefixVec[triNum - 1];
     int freeNum   = triNum - newTriNum;
-
     IntDVec freeVec = memPool.allocateAny<int>(triMaxNum);
-
     freeVec.resize(freeNum);
 
     kerCollectFreeSlots<<<BlocksPerGrid, ThreadsPerBlock>>>(
         toKernelPtr(triInfoVec), toKernelPtr(prefixVec), toKernelPtr(freeVec), newTriNum);
     CudaCheckError();
-
     // Make map
     kerMakeCompactMap<<<BlocksPerGrid, ThreadsPerBlock>>>(
         toKernelArray(triInfoVec), toKernelPtr(prefixVec), toKernelPtr(freeVec), newTriNum);
     CudaCheckError();
-
     // Reorder the tets
     kerCompactTris<<<BlocksPerGrid, ThreadsPerBlock>>>(
         toKernelArray(triInfoVec), toKernelPtr(prefixVec), toKernelPtr(triVec), toKernelPtr(oppVec), newTriNum);
@@ -1137,7 +1105,6 @@ void GpuDel::compactTris()
     triInfoVec.resize(newTriNum);
     triVec.resize(newTriNum);
     oppVec.resize(newTriNum);
-
     memPool.release(freeVec);
     memPool.release(prefixVec);
 }
@@ -1205,14 +1172,4 @@ void GpuDel::restartTiming(ProfLevel level, double &accuTime)
 {
     stopTiming(level, accuTime);
     startTiming(level);
-}
-
-void GpuDel::getEdges(const Tri &t, Edge *sArr)
-{
-    for (int i = 0; i < TriSegNum; ++i)
-    {
-        Edge seg = {t._v[TriSeg[i][0]], t._v[TriSeg[i][1]]};
-        seg.sort();
-        sArr[i] = seg;
-    }
 }
