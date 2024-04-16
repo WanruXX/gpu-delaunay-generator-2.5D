@@ -61,6 +61,7 @@ set(${PROJECT_NAME}_HEADERS
 cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 set(CMAKE_VERBOSE_MAKEFILE "ON")
 target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} yaml-cpp Eigen3::Eigen)
+target_compile_definitions(${PROJECT_NAME}  PRIVATE CUDA_ERROR_CHECK_LEVEL=1)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DDEBUG)

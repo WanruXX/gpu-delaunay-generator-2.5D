@@ -74,20 +74,34 @@ class GpuDel
     void initProfiling();
 
     void initForFlip();
+    void initSizeAndBuffers();
+    void findMinMax();
+    void sortPoints();
     void constructInitialTriangles();
     Tri  setOutputInfPointAndTriangle();
 
     void splitAndFlip();
+
     void splitTri();
+    IntDVec getRankedPoints(int triNum, int noSample);
+    void shiftTriIfNeed(int &triNum, IntDVec &triToVert, IntDVec &splitTriVec);
     void shiftTri(IntDVec &triToVert, IntDVec &splitTriVec);
     template <typename T>
     void shiftExpandVec(IntDVec &shiftVec, DevVector<T> &dataVec, int size);
     void shiftOppVec(IntDVec &shiftVec, TriOppDVec &dataVec, int size);
+    IntDVec makeTriMap(int triNum, const IntDVec &splitTriVec, int splitTriNum);
     void expandTri(int newTriNum);
+    void relocatePoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap);
+    void splitOldTriIntoNew(int triNum, IntDVec &triToVert, IntDVec &splitTriVec, IntDVec &insTriMap);
+
     void flipLoop(CheckDelaunayMode checkMode);
     bool flip(CheckDelaunayMode checkMode);
+    void compactActiveTriangles();
+    void selectMode(int triNum, int orgActNum);
+    IntDVec getTriVotes(CheckDelaunayMode &checkMode, int triNum, int orgActNum);
     void dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, IntDVec &triVoteVec);
     void relocateAll();
+
     void markSpecialTris();
     void insertConstraints();
     void initForConstraintInsertion();
@@ -112,6 +126,8 @@ class GpuDel
     static void getEdges(const Tri &t, Edge *sArr);
 
     void compute(const Input &input, Output &output);
+
+
 };
 
 //constexpr int GpuDel::TriSegNum;
