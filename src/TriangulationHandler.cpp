@@ -1,5 +1,5 @@
 #include "../inc/TriangulationHandler.h"
-#include "../inc/json.h"
+#include "../gpu-delaunay-generator/inc/json.h"
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 

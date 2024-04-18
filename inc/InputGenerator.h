@@ -1,8 +1,8 @@
 #ifndef DELAUNAY_GENERATOR_INPUTCREATOR_H
 #define DELAUNAY_GENERATOR_INPUTCREATOR_H
 
-#include "CommonTypes.h"
-#include "IOType.h"
+#include "../gpu-delaunay-generator/inc/CommonTypes.h"
+#include "../gpu-delaunay-generator/inc/IOType.h"
 #include "RandGen.h"
 
 enum Distribution

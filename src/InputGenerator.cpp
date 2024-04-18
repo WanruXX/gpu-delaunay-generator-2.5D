@@ -1,5 +1,5 @@
 #include "../inc/InputGenerator.h"
-#include "../inc/HashFunctors.h"
+#include "../gpu-delaunay-generator/inc/HashFunctors.h"
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>

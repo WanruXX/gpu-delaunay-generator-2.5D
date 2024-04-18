@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+set_and_check(GDG_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set_and_check(GDG_LIBRARY_DIR "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
+
+set(GDG_SHARED_LIBS_BUILT @YAML_BUILD_SHARED_LIBS@)
+include("${CMAKE_CURRENT_LIST_DIR}/yaml-cpp-targets.cmake")
+set(GDG_LIBRARIES "@EXPORT_TARGETS@")
+
+check_required_components(gpu-delaunay-generator)

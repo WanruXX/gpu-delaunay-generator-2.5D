@@ -1,10 +1,10 @@
 #ifndef DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
 #define DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
 
-#include "DelaunayChecker.h"
+#include "../gpu-delaunay-generator/inc/DelaunayChecker.h"
+#include "../gpu-delaunay-generator/inc/PerfTimer.h"
 #include "GPU/GpuDelaunay.h"
 #include "InputGenerator.h"
-#include "PerfTimer.h"
 #include <bits/stdc++.h>
 #include <Eigen/Dense>
 #include <iomanip>
