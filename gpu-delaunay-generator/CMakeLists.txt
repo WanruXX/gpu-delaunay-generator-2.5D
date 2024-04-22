@@ -17,7 +17,6 @@ set(CUDA_NVCC_FLAGS
         --extended-lambda)
 set(CMAKE_VERBOSE_MAKEFILE "ON")
 
-include(GNUInstallDirs)
 include_directories(include)
 
 set(SOURCES
@@ -34,19 +33,12 @@ set(SOURCES
 )
 
 
-add_library(gpu-delaunay-generator ${SOURCES})
+cuda_add_library(gpu-delaunay-generator ${SOURCES})
 set_target_properties(gpu-delaunay-generator PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_include_directories(${PROJECT_NAME}
-        PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         PRIVATE
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-        ${CUDA_TOOLKIT_INCLUDE}
-        ${CUDAToolkit_INCLUDE_DIRS})
+        ${CUDA_TOOLKIT_INCLUDE})
 
-message("${CUDA_LIBRARIES}")
-message("${CUDAToolkit_LIBRARIES}")
 target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE CUDA_ERROR_CHECK_LEVEL=1)

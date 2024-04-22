@@ -37,7 +37,7 @@ set(${PROJECT_NAME}_SOURCES
 cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 set(CMAKE_VERBOSE_MAKEFILE "ON")
 
-target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp)
+target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp gpu-delaunay-generator)
 target_compile_definitions(${PROJECT_NAME}  PRIVATE CUDA_ERROR_CHECK_LEVEL=1)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
