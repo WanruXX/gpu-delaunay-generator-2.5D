@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
-project(delaunay_generator)
+project(delaunay-app)
 
+if(POLICY CMP0146)
+    cmake_policy(SET CMP0146 OLD)
+endif()
 find_package(CUDA REQUIRED)
-find_package(yaml-cpp REQUIRED)
-find_package(Eigen3 REQUIRED)
+set(CUDA_NVCC_FLAGS
+        ${CUDA_NVCC_FLAGS};
+        -gencode=arch=compute_86,code=sm_86
+        --extended-lambda)
+
 find_package(PCL QUIET)
 if (NOT "${PCL_LIBRARIES}" STREQUAL "")
     include_directories(${PCL_INCLUDE_DIRS})
@@ -12,55 +18,32 @@ if (NOT "${PCL_LIBRARIES}" STREQUAL "")
     add_compile_definitions(WITH_PCL)
 endif ()
 
-# change your arch=<> and code=<> according to your gpu computational capability
-# https://developer.nvidia.com/cuda-gpus
-set(CUDA_NVCC_FLAGS
-        ${CUDA_NVCC_FLAGS};
-        -gencode=arch=compute_86,code=sm_86
-        --extended-lambda)
+find_package(yaml-cpp REQUIRED)
 
-set(${PROJECT_NAME}_SOURCES
-        example/gpu-delaunay-generator/src/DelaunayChecker.cpp
-        src/RandGen.cpp
-        src/InputGenerator.cpp
-        example/gpu-delaunay-generator/src/CPU/PredWrapper.cpp
-        example/gpu-delaunay-generator/src/CPU/predicates.cpp
-        example/gpu-delaunay-generator/src/GPU/GpuDelaunay.cu
-        example/gpu-delaunay-generator/src/GPU/ThrustWrapper.cu
-        example/gpu-delaunay-generator/src/GPU/KerPredicates.cu
-        example/gpu-delaunay-generator/src/GPU/KerDivision.cu
-        example/gpu-delaunay-generator/src/GPU/SmallCounters.cu
-        src/TriangulationHandler.cpp
-        example/gpu-delaunay-generator/src/IOType.cpp)
+add_subdirectory(gpu-delaunay-generator)
 
 set(${PROJECT_NAME}_HEADERS
-        example/gpu-delaunay-generator/inc/CommonTypes.h
-        example/gpu-delaunay-generator/inc/DelaunayChecker.h
-        example/gpu-delaunay-generator/inc/HashFunctors.h
         inc/InputGenerator.h
-        example/gpu-delaunay-generator/inc/json.h
-        example/gpu-delaunay-generator/inc/PerfTimer.h
         inc/RandGen.h
-        example/gpu-delaunay-generator/inc/CPU/PredWrapper.h
-        example/gpu-delaunay-generator/inc/GPU/GpuDelaunay.h
-        example/gpu-delaunay-generator/inc/GPU/CudaWrapper.h
-        example/gpu-delaunay-generator/inc/GPU/DPredWrapper.h
-        example/gpu-delaunay-generator/src/GPU/DPredWrapper.cu
-        example/gpu-delaunay-generator/inc/GPU/HostToKernel.h
-        example/gpu-delaunay-generator/inc/GPU/KerCommon.h
-        example/gpu-delaunay-generator/inc/GPU/KerDivision.h
-        example/gpu-delaunay-generator/inc/GPU/KerPredicates.h
-        example/gpu-delaunay-generator/inc/GPU/MemoryManager.h
-        example/gpu-delaunay-generator/inc/GPU/SmallCounters.h
-        example/gpu-delaunay-generator/inc/GPU/ThrustWrapper.h
         inc/TriangulationHandler.h
         inc/PointType.h
-        example/gpu-delaunay-generator/inc/IOType.h)
+        inc/json.h)
+
+set(${PROJECT_NAME}_SOURCES
+        src/RandGen.cpp
+        src/InputGenerator.cpp
+        src/TriangulationHandler.cpp)
 
 cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 set(CMAKE_VERBOSE_MAKEFILE "ON")
-target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} yaml-cpp Eigen3::Eigen)
+
+target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp)
 target_compile_definitions(${PROJECT_NAME}  PRIVATE CUDA_ERROR_CHECK_LEVEL=1)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    "${PROJECT_BINARY_DIR}"
+    "gpu-delaunay-generator"
+)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DDEBUG)

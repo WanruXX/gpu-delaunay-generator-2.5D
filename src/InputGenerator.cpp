@@ -1,5 +1,4 @@
 #include "../inc/InputGenerator.h"
-#include "../gpu-delaunay-generator/inc/HashFunctors.h"
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,7 +18,7 @@ const std::unordered_map<std::string, Distribution> distributionMap{{"Uniform", 
                                                                     {"TwoLines", TwoLineDistribution}};
 }
 
-InputGenerator::InputGenerator(const InputGeneratorOption &InputPara, Input &Input) : option(InputPara), input(Input)
+InputGenerator::InputGenerator(const InputGeneratorOption &InputPara, gdg::Input &Input) : option(InputPara), input(Input)
 {
 }
 
@@ -131,9 +130,9 @@ void InputGenerator::makePoints()
 
 void InputGenerator::makePointsUniform()
 {
-    std::unordered_set<Point, PointHash> pointSet;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
 
-    Point p;
+    gdg::Point p;
     while (pointSet.size() < option.pointNum)
     {
         p._p[0] = randGen.getNext();
@@ -149,8 +148,8 @@ void InputGenerator::makePointsUniform()
 
 void InputGenerator::makePointsGaussian()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randGen.nextGaussian(p._p[0], p._p[1]);
@@ -165,8 +164,8 @@ void InputGenerator::makePointsGaussian()
 
 void InputGenerator::makePointsDisk()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         double d;
@@ -189,8 +188,8 @@ void InputGenerator::makePointsDisk()
 
 void InputGenerator::makePointsThinCircle()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         double d = randGen.getNext() * 0.001;
@@ -208,8 +207,8 @@ void InputGenerator::makePointsThinCircle()
 
 void InputGenerator::makePointsCircle()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randCirclePoint(p._p[0], p._p[1]);
@@ -226,8 +225,8 @@ void InputGenerator::makePointsCircle()
 
 void InputGenerator::makePointsGrid()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
 
@@ -248,8 +247,8 @@ void InputGenerator::makePointsGrid()
 
 void InputGenerator::makePointsEllipse()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
     while (pointSet.size() < option.pointNum)
     {
         randCirclePoint(p._p[0], p._p[1]);
@@ -266,10 +265,10 @@ void InputGenerator::makePointsEllipse()
 
 void InputGenerator::makePointsTwoLine()
 {
-    std::unordered_set<Point, PointHash> pointSet;
-    Point                                p;
+    std::unordered_set<gdg::Point, gdg::PointHash> pointSet;
+    gdg::Point                                p;
 
-    const Point L[2][2] = {{{0.0, 0.0, 0.0}, {0.3, 0.5, 0.0}}, {{0.7, 0.5, 0.0}, {1.0, 1.0, 0.0}}};
+    const gdg::Point L[2][2] = {{{0.0, 0.0, 0.0}, {0.3, 0.5, 0.0}}, {{0.7, 0.5, 0.0}, {1.0, 1.0, 0.0}}};
     while (pointSet.size() < option.pointNum)
     {
         int    l = (randGen.getNext() < 0.5) ? 0 : 1;
@@ -301,7 +300,7 @@ void InputGenerator::readPoints()
 #endif
     std::ifstream inFile(option.inputFilename);
     std::string   LineData;
-    Point         pt;
+    gdg::Point         pt;
     while (std::getline(inFile, LineData))
     {
         std::stringstream ss(LineData);
@@ -318,7 +317,7 @@ void InputGenerator::readConstraints()
 {
     std::ifstream inFile(option.inputConstraintFilename);
     std::string   LineData;
-    Edge          edge;
+    gdg::Edge          edge;
     while (std::getline(inFile, LineData))
     {
         std::stringstream ss(LineData);

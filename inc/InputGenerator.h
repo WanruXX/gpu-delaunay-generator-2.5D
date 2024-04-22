@@ -1,8 +1,7 @@
 #ifndef DELAUNAY_GENERATOR_INPUTCREATOR_H
 #define DELAUNAY_GENERATOR_INPUTCREATOR_H
 
-#include "../gpu-delaunay-generator/inc/CommonTypes.h"
-#include "../gpu-delaunay-generator/inc/IOType.h"
+#include "gpu-delaunay-generator.h"
 #include "RandGen.h"
 
 enum Distribution
@@ -37,7 +36,7 @@ class InputGenerator
   private:
     RandGen                     randGen;
     const InputGeneratorOption &option;
-    Input                      &input;
+    gdg::Input                      &input;
 
     void randCirclePoint(double &x, double &y);
 
@@ -65,7 +64,7 @@ class InputGenerator
 
   public:
     InputGenerator() = delete;
-    explicit InputGenerator(const InputGeneratorOption &InputPara, Input &Input);
+    explicit InputGenerator(const InputGeneratorOption &InputPara, gdg::Input &Input);
     void generateInput();
 };
 

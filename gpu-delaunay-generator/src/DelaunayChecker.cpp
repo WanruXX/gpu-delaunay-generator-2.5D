@@ -1,6 +1,5 @@
 #include "../include/DelaunayChecker.h"
-#include "../include/json.h"
-
+#include "../../inc/json.h"
 
 namespace gdg
 {
