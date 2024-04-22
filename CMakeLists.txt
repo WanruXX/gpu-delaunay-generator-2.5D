@@ -20,42 +20,42 @@ set(CUDA_NVCC_FLAGS
         --extended-lambda)
 
 set(${PROJECT_NAME}_SOURCES
-        gpu-delaunay-generator/src/DelaunayChecker.cpp
+        example/gpu-delaunay-generator/src/DelaunayChecker.cpp
         src/RandGen.cpp
         src/InputGenerator.cpp
-        gpu-delaunay-generator/src/CPU/PredWrapper.cpp
-        gpu-delaunay-generator/src/CPU/predicates.cpp
-        gpu-delaunay-generator/src/GPU/GpuDelaunay.cu
-        gpu-delaunay-generator/src/GPU/ThrustWrapper.cu
-        gpu-delaunay-generator/src/GPU/KerPredicates.cu
-        gpu-delaunay-generator/src/GPU/KerDivision.cu
-        gpu-delaunay-generator/src/GPU/SmallCounters.cu
+        example/gpu-delaunay-generator/src/CPU/PredWrapper.cpp
+        example/gpu-delaunay-generator/src/CPU/predicates.cpp
+        example/gpu-delaunay-generator/src/GPU/GpuDelaunay.cu
+        example/gpu-delaunay-generator/src/GPU/ThrustWrapper.cu
+        example/gpu-delaunay-generator/src/GPU/KerPredicates.cu
+        example/gpu-delaunay-generator/src/GPU/KerDivision.cu
+        example/gpu-delaunay-generator/src/GPU/SmallCounters.cu
         src/TriangulationHandler.cpp
-        gpu-delaunay-generator/src/IOType.cpp)
+        example/gpu-delaunay-generator/src/IOType.cpp)
 
 set(${PROJECT_NAME}_HEADERS
-        gpu-delaunay-generator/inc/CommonTypes.h
-        gpu-delaunay-generator/inc/DelaunayChecker.h
-        gpu-delaunay-generator/inc/HashFunctors.h
+        example/gpu-delaunay-generator/inc/CommonTypes.h
+        example/gpu-delaunay-generator/inc/DelaunayChecker.h
+        example/gpu-delaunay-generator/inc/HashFunctors.h
         inc/InputGenerator.h
-        gpu-delaunay-generator/inc/json.h
-        gpu-delaunay-generator/inc/PerfTimer.h
+        example/gpu-delaunay-generator/inc/json.h
+        example/gpu-delaunay-generator/inc/PerfTimer.h
         inc/RandGen.h
-        gpu-delaunay-generator/inc/CPU/PredWrapper.h
-        gpu-delaunay-generator/inc/GPU/GpuDelaunay.h
-        gpu-delaunay-generator/inc/GPU/CudaWrapper.h
-        gpu-delaunay-generator/inc/GPU/DPredWrapper.h
-        gpu-delaunay-generator/src/GPU/DPredWrapper.cu
-        gpu-delaunay-generator/inc/GPU/HostToKernel.h
-        gpu-delaunay-generator/inc/GPU/KerCommon.h
-        gpu-delaunay-generator/inc/GPU/KerDivision.h
-        gpu-delaunay-generator/inc/GPU/KerPredicates.h
-        gpu-delaunay-generator/inc/GPU/MemoryManager.h
-        gpu-delaunay-generator/inc/GPU/SmallCounters.h
-        gpu-delaunay-generator/inc/GPU/ThrustWrapper.h
+        example/gpu-delaunay-generator/inc/CPU/PredWrapper.h
+        example/gpu-delaunay-generator/inc/GPU/GpuDelaunay.h
+        example/gpu-delaunay-generator/inc/GPU/CudaWrapper.h
+        example/gpu-delaunay-generator/inc/GPU/DPredWrapper.h
+        example/gpu-delaunay-generator/src/GPU/DPredWrapper.cu
+        example/gpu-delaunay-generator/inc/GPU/HostToKernel.h
+        example/gpu-delaunay-generator/inc/GPU/KerCommon.h
+        example/gpu-delaunay-generator/inc/GPU/KerDivision.h
+        example/gpu-delaunay-generator/inc/GPU/KerPredicates.h
+        example/gpu-delaunay-generator/inc/GPU/MemoryManager.h
+        example/gpu-delaunay-generator/inc/GPU/SmallCounters.h
+        example/gpu-delaunay-generator/inc/GPU/ThrustWrapper.h
         inc/TriangulationHandler.h
         inc/PointType.h
-        gpu-delaunay-generator/inc/IOType.h)
+        example/gpu-delaunay-generator/inc/IOType.h)
 
 cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 set(CMAKE_VERBOSE_MAKEFILE "ON")
