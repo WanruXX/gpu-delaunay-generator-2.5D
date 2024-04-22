@@ -1,11 +1,11 @@
 #include "../inc/TriangulationHandler.h"
-#include "../inc/json.h"
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
+#include "../inc/json.h"
 
 TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
 {
-    CudaSafeCall(cudaSetDevice(cutGetMaxGflopsDeviceId()));
+    CudaSafeCall(cudaSetDevice(gdg::cutGetMaxGflopsDeviceId()));
 
     YAML::Node config = YAML::LoadFile(InputYAMLFile);
 
@@ -52,19 +52,19 @@ TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
     std::string InputProfLevel = config["ProfLevel"].as<std::string>();
     if (InputProfLevel == "Detail")
     {
-        input.profLevel = ProfDetail;
+        input.profLevel = gdg::ProfDetail;
     }
     else if (InputProfLevel == "Diag")
     {
-        input.profLevel = ProfDiag;
+        input.profLevel = gdg::ProfDiag;
     }
     else if (InputProfLevel == "Debug")
     {
-        input.profLevel = ProfDebug;
+        input.profLevel = gdg::ProfDebug;
     }
     else
     {
-        input.profLevel = ProfDefault;
+        input.profLevel = gdg::ProfDefault;
     }
 
     outputResult   = config["OutputTriangles"].as<bool>();
@@ -73,13 +73,13 @@ TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
 
 void TriangulationHandler::reset()
 {
-    TriHVec().swap(output.triVec);
-    TriOppHVec().swap(output.triOppVec);
+    gdg::TriHVec().swap(output.triVec);
+    gdg::TriOppHVec().swap(output.triOppVec);
 }
 
 void TriangulationHandler::run()
 {
-    GpuDel gpuDel;
+    gdg::GpuDel gpuDel;
     for (int i = 0; i < runNum; ++i)
     {
         reset();
@@ -91,7 +91,7 @@ void TriangulationHandler::run()
         statSum.accumulate(output.stats);
         if (doCheck)
         {
-            DelaunayChecker checker(input, output);
+            gdg::DelaunayChecker checker(input, output);
             std::cout << "\n*** Check ***\n";
             checker.checkEuler();
             checker.checkOrientation();
@@ -207,12 +207,12 @@ void TriangulationHandler::saveToObj(std::ofstream &outputTri) const{
     }
 }
 
-bool TriangulationHandler::checkInside(Tri &t, Point p) const
+bool TriangulationHandler::checkInside(gdg::Tri &t, gdg::Point p) const
 {
     // Create a point at infinity, y is same as point p
     line exline = {p, {p._p[0] + 320, p._p[1], p._p[2]}};
     int  count  = 0;
-    for (auto i : TriSeg)
+    for (auto i : gdg::TriSeg)
     {
         line side = {input.pointVec[t._v[i[0]]], input.pointVec[t._v[i[1]]]};
         if (isIntersect(side, exline))

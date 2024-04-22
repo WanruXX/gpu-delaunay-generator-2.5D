@@ -1,20 +1,17 @@
 #ifndef DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
 #define DELAUNAY_GENERATOR_TRIANGULATIONHANDLER_H
 
-#include "DelaunayChecker.h"
-#include "GPU/GpuDelaunay.h"
+#include "gpu-delaunay-generator.h"
 #include "InputGenerator.h"
-#include "PerfTimer.h"
 #include <bits/stdc++.h>
-#include <Eigen/Dense>
 #include <iomanip>
 
 struct line
 {
-    Point p1, p2;
+    gdg::Point p1, p2;
 };
 
-inline bool onLine(line l1, Point p)
+inline bool onLine(line l1, gdg::Point p)
 {
     // Check whether p is on the line or not
     if (p._p[0] <= std::max(l1.p1._p[0], l1.p2._p[0]) && p._p[0] <= std::min(l1.p1._p[0], l1.p2._p[0]) &&
@@ -24,7 +21,7 @@ inline bool onLine(line l1, Point p)
     return false;
 }
 
-inline int direction(Point a, Point b, Point c)
+inline int direction(gdg::Point a, gdg::Point b, gdg::Point c)
 {
     auto val = (b._p[1] - a._p[1]) * (c._p[0] - b._p[0]) - (b._p[0] - a._p[0]) * (c._p[1] - b._p[1]);
 
@@ -44,7 +41,7 @@ inline int direction(Point a, Point b, Point c)
 
 inline bool isIntersect(line l1, line l2)
 {
-    // Four direction for two lines and points of other line
+    // Four direction for two lines and gdg::Points of other line
     int dir1 = direction(l1.p1, l1.p2, l2.p1);
     int dir2 = direction(l1.p1, l1.p2, l2.p2);
     int dir3 = direction(l2.p1, l2.p2, l1.p1);
@@ -82,16 +79,16 @@ class TriangulationHandler
     void saveResultsToFile();
     void saveToGeojson(std::ofstream &outputTri) const;
     void saveToObj(std::ofstream &outputTri) const;
-    bool checkInside(Tri &t, Point p) const;
+    bool checkInside(gdg::Tri &t, gdg::Point p) const;
 
     int         runNum       = 1;
     bool        doCheck      = false;
     bool        outputResult = false;
     std::string OutputFilename;
 
-    Input       input;
-    Output      output;
-    Statistics  statSum;
+    gdg::Input       input;
+    gdg::Output      output;
+    gdg::Statistics  statSum;
 
   public:
     explicit TriangulationHandler(const char *InputYAMLFile);
