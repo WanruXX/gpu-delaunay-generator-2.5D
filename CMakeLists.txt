@@ -38,8 +38,8 @@ cuda_add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCES} ${${PROJ
 set(CMAKE_VERBOSE_MAKEFILE "ON")
 
 target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp gpu-delaunay-generator)
-target_compile_definitions(${PROJECT_NAME}  PRIVATE CUDA_ERROR_CHECK_LEVEL=1)
-
+target_compile_definitions(${PROJECT_NAME} PRIVATE PROFILE_NONE=0 PROFILE_DEFAULT=1 PROFILE_DETAIL=2 PROFILE_DIAGNOSE=3 PROFILE_DEBUG=4 PROFILE_LEVEL_NUM=5)
+target_compile_definitions(${PROJECT_NAME} PRIVATE CUDA_ERROR_CHECK_LEVEL=1 PROFILE_LEVEL=1)
 target_include_directories(${PROJECT_NAME} PUBLIC
     "${PROJECT_BINARY_DIR}"
     "gpu-delaunay-generator"
