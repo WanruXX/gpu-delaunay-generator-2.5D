@@ -11,6 +11,7 @@ include(GNUInstallDirs)
 
 find_package(CUDAToolkit QUIET)
 find_package(CUDA REQUIRED)
+set(CUDA_VERSION_STRING ${CMAKE_CUDA_COMPILER_VERSION})
 set(CUDA_NVCC_FLAGS
         ${CUDA_NVCC_FLAGS};
         -gencode=arch=compute_86,code=sm_86

@@ -39,4 +39,4 @@ DoCheck: false
 # Output check/triangulation result
 OutputTriangles: true
 # Choose among {".geojson", ".obj"}
-OutputTrianglePath: "/home/wxxs6p/Documents/private/example_tri.obj"
+OutputTrianglePath: "/home/wxxs6p/Documents/data/example_tri.obj"
