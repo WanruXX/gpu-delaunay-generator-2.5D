@@ -65,18 +65,24 @@ GIS) and computational modeling,
 ### Usage
 
 1. Set up running parameters in [config.yaml](https://github.com/WanruXX/gpu-delaunay-generator-2.5D/blob/main/conf/config.yaml).
+
+
 2. Prepare your point data if you choose to input from a file, in the format of
     ```
     x1 y1 z1
     x2 y2 z2
     ...
     ```
+   
+
 3. Prepare your constraint data if you choose to add constrains for the triangulation, in the format of
    ```
    pt_id1 pt_id2
    pt_id3 pt_id4
    ...
    ```
+   
+
 4. Run the executable, providing the config file:
     ```bash
     ./delaunay-app ../conf/config.yaml

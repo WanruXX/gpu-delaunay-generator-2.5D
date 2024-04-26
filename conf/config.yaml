@@ -14,7 +14,7 @@ RunNum: 1
 InputFromFile: false
 #---------------------#
 # if InputFromFile
-InputPointCloudFile: "/home/wxxs6p/repo/gDel2D-edition/app/test1/slices/slice_138.pcd"
+InputPointCloudFile: "xxx.pcd"
 InputConstraintFile: ""
 #---------------------#
 # if NOT InputFromFile
@@ -25,7 +25,7 @@ DistributionType: "Uniform"
 Seed: 76213898
 # Save randomly generated points
 SaveToFile: false
-SavePath: "/home/wxxs6p/Documents/private/gpu-delaunay-generator-2.5D/example_points.txt"
+SavePath: "xxx.txt"
 #-------------------------------------------------------------------------------#
 # Insert all before flipping
 InsertAll: false
@@ -39,4 +39,4 @@ DoCheck: false
 # Output check/triangulation result
 OutputTriangles: true
 # Choose among {".geojson", ".obj"}
-OutputTrianglePath: "/home/wxxs6p/Documents/data/example_tri.obj"
+OutputTrianglePath: "xxx.obj"
