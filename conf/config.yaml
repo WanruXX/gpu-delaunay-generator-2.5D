@@ -29,16 +29,10 @@ SavePath: "/home/wxxs6p/Documents/private/gpu-delaunay-generator-2.5D/example_po
 #-------------------------------------------------------------------------------#
 # Insert all before flipping
 InsertAll: false
-
 # Sort input points
 NoSortPoint: false
-
 # Reorder the triangle before flipping
 NoReorder: false
-
-# Level of code profiling, choose among {"Default", "Detail", "Diag", "Debug"}
-ProfLevel: "Default"
-
 # Check Euler, orientation, etc.
 DoCheck: false
 

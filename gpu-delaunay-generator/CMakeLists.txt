@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 project(gpu-delaunay-generator VERSION 1.0.0 LANGUAGES CXX CUDA)
-if(POLICY CMP0146)
+if (POLICY CMP0146)
     cmake_policy(SET CMP0146 OLD)
-endif()
+endif ()
 
 include(CMakePackageConfigHelpers)
 include(CMakeDependentOption)
@@ -40,4 +40,5 @@ target_include_directories(${PROJECT_NAME}
         ${CUDA_TOOLKIT_INCLUDE})
 
 target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES})
-target_compile_definitions(${PROJECT_NAME} PRIVATE CUDA_ERROR_CHECK_LEVEL=1)
+target_compile_definitions(${PROJECT_NAME} PRIVATE PROFILE_NONE=0 PROFILE_DEFAULT=1 PROFILE_DETAIL=2 PROFILE_DIAGNOSE=3 PROFILE_DEBUG=4 PROFILE_LEVEL_NUM=5)
+target_compile_definitions(${PROJECT_NAME} PRIVATE CUDA_ERROR_CHECK_LEVEL=1 PROFILE_LEVEL=1)

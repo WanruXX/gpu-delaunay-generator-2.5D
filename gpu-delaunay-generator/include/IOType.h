@@ -5,16 +5,6 @@
 
 namespace gdg
 {
-// Different level of code profiling
-enum ProfLevel
-{
-    ProfNone,
-    ProfDefault,
-    ProfDetail,
-    ProfDiag,
-    ProfDebug,
-    ProfLevelCount
-};
 
 struct Input
 {
@@ -24,12 +14,6 @@ struct Input
     bool      insAll    = false; // Insert all before flipping
     bool      noSort    = false; // Sort input points (unused)
     bool      noReorder = false; // Reorder the triangle before flipping
-    ProfLevel profLevel = ProfDefault;
-
-    bool isProfiling(ProfLevel level) const
-    {
-        return (profLevel >= level);
-    }
 
     Input() = default;
 
@@ -42,7 +26,6 @@ struct Output
     TriOppHVec     triOppVec;
     std::set<Edge> edgeSet;
     Point          infPt;
-    Statistics     stats;
 
     void reset();
 

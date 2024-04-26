@@ -11,8 +11,8 @@
 #include <iomanip>
 #include <iostream>
 
-namespace gdg{
-
+namespace gdg
+{
 
 constexpr int BlocksPerGrid        = 512;
 constexpr int ThreadsPerBlock      = 128;
@@ -58,20 +58,26 @@ class GpuDel
 
     SmallCounters counters;
     DPredWrapper  dPredWrapper;
+    ActTriMode actTriMode = ActTriMarkCompact;
 
-    ActTriMode  actTriMode = ActTriMarkCompact;
-    Diagnostic  diagLogCompact, diagLogCollect;
+#if PROFILE_LEVEL >= PROFILE_NONE
+    CudaTimer  profTimer[PROFILE_LEVEL_NUM];
+    Statistics stats;
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    Diagnostic  diagLogCompact;
+    Diagnostic  diagLogCollect;
     Diagnostic *diagLogPtr = nullptr;
-
-    IntHVec numActiveVec;
-    IntHVec numFlipVec;
-    IntHVec numCircleVec;
-
-    CudaTimer profTimer[ProfLevelCount];
-    IntDVec   circleCountVec;
-    IntDVec   rejFlipVec;
-    RealHVec  timeCheckVec;
-    RealHVec  timeFlipVec;
+#endif
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    IntHVec  numActiveVec;
+    IntHVec  numFlipVec;
+    RealHVec timeCheckVec;
+    RealHVec timeFlipVec;
+    IntHVec  numCircleVec;
+    IntDVec circleCountVec;
+    IntDVec rejFlipVec;
+#endif
 
   private:
     void initProfiling();
@@ -125,16 +131,13 @@ class GpuDel
 
     void cleanup();
 
-    void startTiming(ProfLevel level);
-    void stopTiming(ProfLevel level, double &accuTime);
-    void pauseTiming(ProfLevel level);
-    void restartTiming(ProfLevel level, double &accuTime);
-
   public:
     GpuDel();
 
     void compute(const Input &input, Output &output);
+
+    const Statistics &getStatistics() const;
 };
 
-}
+} // namespace gdg
 #endif //DELAUNAY_GENERATOR_GPUDELAUNAYC_H

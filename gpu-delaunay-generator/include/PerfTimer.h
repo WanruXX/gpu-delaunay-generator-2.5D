@@ -54,7 +54,6 @@ struct PerfTimer
 {
     long long _startTime = 0;
     long long _stopTime  = 0;
-    long long _leftover  = 0;
     long long _value     = 0;
 
     PerfTimer() = default;
@@ -84,14 +83,7 @@ struct PerfTimer
     virtual void stop()
     {
         _stopTime = _getTime();
-        _value    = _leftover + _stopTime - _startTime;
-        _leftover = 0;
-    }
-
-    virtual void pause()
-    {
-        _stopTime = _getTime();
-        _leftover += _stopTime - _startTime;
+        _value    = _stopTime - _startTime;
     }
 
     double value() const
@@ -113,12 +105,6 @@ class CudaTimer : public PerfTimer
     {
         CudaSafeCall(cudaDeviceSynchronize());
         PerfTimer::stop();
-    }
-
-    void pause() override
-    {
-        CudaSafeCall(cudaDeviceSynchronize());
-        PerfTimer::pause();
     }
 
     double value()
