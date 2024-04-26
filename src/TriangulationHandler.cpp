@@ -116,7 +116,8 @@ void TriangulationHandler::run()
     std::cout << "Insert mode    " << (input.insAll ? "InsAll" : "InsFlip") << std::endl;
     std::cout << std::endl;
     std::cout << std::fixed << std::right << std::setprecision(2);
-    std::cout << "TotalTime (ms) " << std::setw(10) << statSum.totalTime << std::endl;
+    std::cout << "Time used (ms)" << std::endl;
+    std::cout << "TotalTime      " << std::setw(10) << statSum.totalTime << std::endl;
     std::cout << "InitTime       " << std::setw(10) << statSum.initTime << std::endl;
     std::cout << "SplitTime      " << std::setw(10) << statSum.splitTime << std::endl;
     std::cout << "FlipTime       " << std::setw(10) << statSum.flipTime << std::endl;

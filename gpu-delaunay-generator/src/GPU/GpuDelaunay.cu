@@ -63,6 +63,9 @@ void GpuDel::compute(const Input &input, Output &output)
 {
     inputPtr  = &input;
     outputPtr = &output;
+    outputPtr->stats.reset();
+    diagLogCompact.reset();
+    diagLogCollect.reset();
 
     initProfiling();
 
@@ -1133,10 +1136,6 @@ void GpuDel::cleanup()
 
     circleCountVec.free();
     rejFlipVec.free();
-
-    outputPtr->stats.reset();
-    diagLogCompact.reset();
-    diagLogCollect.reset();
 
     numActiveVec.clear();
     numFlipVec.clear();

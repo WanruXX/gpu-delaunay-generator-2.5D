@@ -34,7 +34,6 @@ set(SOURCES
 
 
 cuda_add_library(gpu-delaunay-generator ${SOURCES})
-set_target_properties(gpu-delaunay-generator PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE
