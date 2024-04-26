@@ -84,3 +84,6 @@ GIS) and computational modeling,
 
 ## Demo
 
+https://github.com/WanruXX/gpu-delaunay-generator-2.5D/assets/48364194/188c599e-b548-4793-abc7-99322e898599
+
+
