@@ -24,25 +24,19 @@ DistributionType: "Uniform"
 # Initial seed
 Seed: 76213898
 # Save randomly generated points
-SaveToFile: true
-SavePath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/points.txt"
+SaveToFile: false
+SavePath: "/home/wxxs6p/Documents/private/gpu-delaunay-generator-2.5D/example_points.txt"
 #-------------------------------------------------------------------------------#
 # Insert all before flipping
 InsertAll: false
-
 # Sort input points
 NoSortPoint: false
-
 # Reorder the triangle before flipping
 NoReorder: false
-
-# Level of code profiling, choose among {"Default", "Detail", "Diag", "Debug"}
-ProfLevel: "Default"
-
 # Check Euler, orientation, etc.
 DoCheck: false
 
 # Output check/triangulation result
 OutputTriangles: true
 # Choose among {".geojson", ".obj"}
-OutputTrianglePath: "/home/wxxs6p/Documents/private/gDel2D-edition/test/slice_138.obj"
+OutputTrianglePath: "/home/wxxs6p/Documents/data/example_tri.obj"

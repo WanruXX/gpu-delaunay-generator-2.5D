@@ -112,7 +112,6 @@ inline void cuPrintMemory(const char *inStr)
     std::cout << inStr << " Memory used: " << (total - free) / MegaByte << " MB" << std::endl;
 }
 
-// Obtained from: C:\ProgramData\NVIDIA Corporation\GPU SDK\C\common\inc\cutil_inline_runtime.h
 // This function returns the best GPU (with maximum GFLOPS)
 inline int cutGetMaxGflopsDeviceId()
 {

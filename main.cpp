@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
     cudaError_t cudaResultCode = cudaGetDeviceCount(&deviceCount);
     if (cudaResultCode != cudaSuccess)
     {
-        std::cerr << "Cuda: cannot get deice count!" << std::endl;
+        std::cerr << "Cuda: cannot get device count!" << std::endl;
         return -1;
     }
     cudaDeviceProp properties{};

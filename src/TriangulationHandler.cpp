@@ -49,24 +49,6 @@ TriangulationHandler::TriangulationHandler(const char *InputYAMLFile)
     input.noSort    = config["NoSortPoint"].as<bool>();
     input.noReorder = config["NoReorder"].as<bool>();
 
-    std::string InputProfLevel = config["ProfLevel"].as<std::string>();
-    if (InputProfLevel == "Detail")
-    {
-        input.profLevel = gdg::ProfDetail;
-    }
-    else if (InputProfLevel == "Diag")
-    {
-        input.profLevel = gdg::ProfDiag;
-    }
-    else if (InputProfLevel == "Debug")
-    {
-        input.profLevel = gdg::ProfDebug;
-    }
-    else
-    {
-        input.profLevel = gdg::ProfDefault;
-    }
-
     outputResult   = config["OutputTriangles"].as<bool>();
     OutputFilename = config["OutputTrianglePath"].as<std::string>();
 }
@@ -84,11 +66,7 @@ void TriangulationHandler::run()
     {
         reset();
         gpuDel.compute(input, output);
-        std::cout << "Run " << i << " ---> gpu usage time (ms): " << output.stats.totalTime << " ("
-                  << output.stats.initTime << ", " << output.stats.splitTime << ", " << output.stats.flipTime << ", "
-                  << output.stats.relocateTime << ", " << output.stats.sortTime << ", " << output.stats.constraintTime
-                  << ", " << output.stats.outTime << ")" << std::endl;
-        statSum.accumulate(output.stats);
+        statSum.accumulate(gpuDel.getStatistics());
         if (doCheck)
         {
             gdg::DelaunayChecker checker(input, output);
@@ -116,7 +94,8 @@ void TriangulationHandler::run()
     std::cout << "Insert mode    " << (input.insAll ? "InsAll" : "InsFlip") << std::endl;
     std::cout << std::endl;
     std::cout << std::fixed << std::right << std::setprecision(2);
-    std::cout << "TotalTime (ms) " << std::setw(10) << statSum.totalTime << std::endl;
+    std::cout << "Time used (ms)" << std::endl;
+    std::cout << "TotalTime      " << std::setw(10) << statSum.totalTime << std::endl;
     std::cout << "InitTime       " << std::setw(10) << statSum.initTime << std::endl;
     std::cout << "SplitTime      " << std::setw(10) << statSum.splitTime << std::endl;
     std::cout << "FlipTime       " << std::setw(10) << statSum.flipTime << std::endl;

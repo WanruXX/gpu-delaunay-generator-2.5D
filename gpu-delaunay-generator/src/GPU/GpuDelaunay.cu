@@ -65,41 +65,59 @@ void GpuDel::compute(const Input &input, Output &output)
     outputPtr = &output;
 
     initProfiling();
-
-    startTiming(ProfNone);
+#if PROFILE_LEVEL >= PROFILE_NONE
+    profTimer[PROFILE_NONE].start();
+#endif
     initForFlip();
     splitAndFlip();
     outputToHost();
-    stopTiming(ProfNone, outputPtr->stats.totalTime);
+#if PROFILE_LEVEL >= PROFILE_NONE
+    profTimer[PROFILE_NONE].stop();
+    stats.totalTime += profTimer[PROFILE_NONE].value();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    std::cout << " FlipCompact time: ";
+    diagLogCompact.printTime();
+    std::cout << std::endl;
+    std::cout << " FlipCollect time: ";
+    diagLogCollect.printTime();
+    std::cout << std::endl;
+#endif
 
-    if (inputPtr->isProfiling(ProfDetail))
-    {
-        std::cout << " FlipCompact time: ";
-        diagLogCompact.printTime();
-        std::cout << std::endl;
-        std::cout << " FlipCollect time: ";
-        diagLogCollect.printTime();
-        std::cout << std::endl;
-    }
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    static int i = 0;
+    std::cout << "Run " << i << " ---> gpu usage time (ms): " << stats.totalTime << " ("
+              << stats.initTime << ", " << stats.splitTime << ", " << stats.flipTime << ", "
+              << stats.relocateTime << ", " << stats.sortTime << ", " << stats.constraintTime
+              << ", " << stats.outTime << ")" << std::endl;
+    ++i;
+#endif
     cleanup();
 }
 
 void GpuDel::initProfiling()
 {
-    outputPtr->stats.reset();
+#if PROFILE_LEVEL >= PROFILE_NONE
+    stats.reset();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
     diagLogCompact.reset();
     diagLogCollect.reset();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
     numActiveVec.clear();
     numFlipVec.clear();
     timeCheckVec.clear();
     timeFlipVec.clear();
+    numCircleVec.clear();
+#endif
 }
 
 void GpuDel::initForFlip()
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     initSizeAndBuffers();
     findMinMax();
     // Sort points along space curve
@@ -109,8 +127,10 @@ void GpuDel::initForFlip()
     }
     // Create first upper-lower triangles
     constructInitialTriangles();
-
-    stopTiming(ProfDefault, outputPtr->stats.initTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.initTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 void GpuDel::initSizeAndBuffers()
@@ -132,11 +152,10 @@ void GpuDel::initSizeAndBuffers()
 
     counters.init();
 
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        circleCountVec.resize(triMaxNum);
-        rejFlipVec.resize(triMaxNum);
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    circleCountVec.resize(triMaxNum);
+    rejFlipVec.resize(triMaxNum);
+#endif
 
     // Preallocate some buffers in the pool
     memPool.reserve<FlipItem>(triMaxNum); // flipVec
@@ -160,17 +179,18 @@ void GpuDel::findMinMax()
         thrust::minmax_element(coords, coords + static_cast<long>(pointVec.size()) * 2);
     minVal = *ret.first;
     maxVal = *ret.second;
-    if (inputPtr->isProfiling(ProfDebug))
-    {
-        std::cout << "minVal = " << minVal << ", maxVal == " << maxVal << std::endl;
-    }
+#if PROFILE_LEVEL >= PROFILE_DEBUG
+    std::cout << "minVal = " << minVal << ", maxVal == " << maxVal << std::endl;
+#endif
 }
 
 void GpuDel::sortPoints()
 {
-    stopTiming(ProfDefault, outputPtr->stats.initTime);
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.initTime += profTimer[PROFILE_DEFAULT].value();
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     IntDVec valueVec = memPool.allocateAny<int>(pointNum);
     valueVec.resize(pointVec.size());
 
@@ -183,9 +203,11 @@ void GpuDel::sortPoints()
         valueVec.begin(), valueVec.end(), make_zip_iterator(make_tuple(originalPointIdx.begin(), pointVec.begin())));
 
     memPool.release(valueVec);
-
-    stopTiming(ProfDefault, outputPtr->stats.sortTime);
-    startTiming(ProfDefault);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.sortTime += profTimer[PROFILE_DEFAULT].value();
+    profTimer[PROFILE_DEFAULT].start();
+#endif
 }
 
 void GpuDel::constructInitialTriangles()
@@ -226,22 +248,17 @@ Tri GpuDel::setOutputInfPointAndTriangle()
     const auto  v2 = static_cast<int>(thrust::max_element(distVec.begin(), distVec.end()) - distVec.begin());
     const Point p2 = pointVec[v2];
     memPool.release(distVec);
-
-    if (inputPtr->isProfiling(ProfDebug))
-    {
-        std::cout << "Leftmost: " << v0 << " --> " << p0._p[0] << " " << p0._p[1] << std::endl;
-        std::cout << "Rightmost: " << v1 << " --> " << p1._p[0] << " " << p1._p[1] << std::endl;
-        std::cout << "Furthest 2D: " << v2 << " --> " << p2._p[0] << " " << p2._p[1] << std::endl;
-    }
-
+#if PROFILE_LEVEL >= PROFILE_DEBUG
+    std::cout << "Leftmost: " << v0 << " --> " << p0._p[0] << " " << p0._p[1] << std::endl;
+    std::cout << "Rightmost: " << v1 << " --> " << p1._p[0] << " " << p1._p[1] << std::endl;
+    std::cout << "Furthest 2D: " << v2 << " --> " << p2._p[0] << " " << p2._p[1] << std::endl;
+#endif
     // Check to make sure the 4 points are not co-planar
     double ori = orient2dzero(p0._p, p1._p, p2._p);
-
     if (almost_zero(ori))
     {
         throw(std::runtime_error("Input too degenerated! Points are almost on the same line!"));
     }
-
     if (ortToOrient(ori) == OrientNeg)
     {
         std::swap(v0, v1);
@@ -251,20 +268,15 @@ Tri GpuDel::setOutputInfPointAndTriangle()
     outputPtr->infPt._p[0] = (p0._p[0] + p1._p[0] + p2._p[0]) / 3.0;
     outputPtr->infPt._p[1] = (p0._p[1] + p1._p[1] + p2._p[1]) / 3.0;
     outputPtr->infPt._p[2] = (p0._p[2] + p1._p[2] + p2._p[2]) / 3.0;
-
     pointVec.resize(pointNum);
     pointVec[infIdx] = outputPtr->infPt;
-
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        std::cout << "Kernel: " << outputPtr->infPt._p[0] << " " << outputPtr->infPt._p[1] << " "
-                  << outputPtr->infPt._p[2] << std::endl;
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    std::cout << "Kernel: " << outputPtr->infPt._p[0] << " " << outputPtr->infPt._p[1] << " " << outputPtr->infPt._p[2]
+              << std::endl;
+#endif
     dPredWrapper.init(
         toKernelPtr(pointVec), pointNum, inputPtr->noSort ? nullptr : toKernelPtr(originalPointIdx), infIdx);
-
     setPredWrapperConstant(dPredWrapper);
-
     return {v0, v1, v2};
 }
 
@@ -284,7 +296,6 @@ void GpuDel::splitAndFlip()
     {
         flipLoop(CircleFastOrientFast);
     }
-
     markSpecialTris();
     flipLoop(CircleExactOrientSoS);
 
@@ -293,25 +304,23 @@ void GpuDel::splitAndFlip()
     {
         insertConstraints();
     }
-
     flipLoop(CircleFastOrientFast);
     markSpecialTris();
     flipLoop(CircleExactOrientSoS);
-
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        std::cout << "\nInsert loops: " << insLoop << std::endl;
-        std::cout << "Compact: " << std::endl;
-        diagLogCompact.printCount();
-        std::cout << "Collect: " << std::endl;
-        diagLogCollect.printCount();
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    std::cout << "\nInsert loops: " << insLoop << std::endl;
+    std::cout << "Compact: " << std::endl;
+    diagLogCompact.printCount();
+    std::cout << "Collect: " << std::endl;
+    diagLogCollect.printCount();
+#endif
 }
 
 void GpuDel::splitTri()
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     IntDVec triToVert   = memPool.allocateAny<int>(triMaxNum);
     IntDVec splitTriVec = memPool.allocateAny<int>(pointNum);
     IntDVec insTriMap   = memPool.allocateAny<int>(triMaxNum);
@@ -319,20 +328,19 @@ void GpuDel::splitTri()
     auto triNum   = static_cast<int>(triVec.size());
     int  noSample = pointNum / triNum > MaxSamplePerTri ? triNum * MaxSamplePerTri : pointNum;
     getRankedPoints(triNum, noSample, triToVert);
-    insertTriNum = thrust_copyIf_TriHasVert(triToVert, splitTriVec);
-
+    insertTriNum          = thrust_copyIf_TriHasVert(triToVert, splitTriVec);
     const int splitTriNum = triNum + DIM * insertTriNum;
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        std::cout << "Insert: " << insertTriNum << " Tri from: " << triNum << " to: " << splitTriNum << std::endl;
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    std::cout << "Insert: " << insertTriNum << " Tri from: " << triNum << " to: " << splitTriNum << std::endl;
+#endif
     shiftTriIfNeed(triNum, triToVert, splitTriVec);
     makeTriMap(splitTriNum, triNum, splitTriVec, insTriMap);
-    stopTiming(ProfDefault, outputPtr->stats.splitTime);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.splitTime += profTimer[PROFILE_DEFAULT].value();
+#endif
     splitPoints(triNum, triToVert, insTriMap);
     splitOldTriIntoNew(triNum, triToVert, splitTriVec, insTriMap);
-
     memPool.release(triToVert);
     memPool.release(splitTriVec);
     memPool.release(insTriMap);
@@ -370,17 +378,23 @@ void GpuDel::shiftTriIfNeed(int &triNum, IntDVec &triToVert, IntDVec &splitTriVe
     }
     if (!inputPtr->noReorder && doFlipping)
     {
-        stopTiming(ProfDefault, outputPtr->stats.splitTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+        profTimer[PROFILE_DEFAULT].stop();
+        stats.splitTime += profTimer[PROFILE_DEFAULT].value();
+#endif
         shiftTri(triToVert, splitTriVec);
         triNum = -1; // Mark that we have shifted the array
-        startTiming(ProfDefault);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+        profTimer[PROFILE_DEFAULT].start();
+#endif
     }
 }
 
 void GpuDel::shiftTri(IntDVec &triToVert, IntDVec &splitTriVec)
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     const auto triNum   = static_cast<int>(triVec.size() + 2 * splitTriVec.size());
     IntDVec    shiftVec = memPool.allocateAny<int>(triMaxNum);
     thrust_scan_TriHasVert(triToVert, shiftVec);
@@ -394,7 +408,10 @@ void GpuDel::shiftTri(IntDVec &triToVert, IntDVec &splitTriVec)
     kerShiftTriIdx<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(splitTriVec), toKernelPtr(shiftVec));
     CudaCheckError();
     memPool.release(shiftVec);
-    stopTiming(ProfDefault, outputPtr->stats.sortTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.sortTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 template <typename T>
@@ -435,7 +452,9 @@ void GpuDel::expandTri(int newTriNum)
 
 void GpuDel::splitPoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap)
 {
-    startTiming(ProfDefault);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     IntDVec exactCheckVec = memPool.allocateAny<int>(pointNum);
     counters.renew();
     kerSplitPointsFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(vertexTriVec),
@@ -456,12 +475,17 @@ void GpuDel::splitPoints(int triNum, IntDVec &triToVert, IntDVec &insTriMap)
                                                                        insertTriNum);
     CudaCheckError();
     memPool.release(exactCheckVec);
-    stopTiming(ProfDefault, outputPtr->stats.relocateTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.relocateTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 void GpuDel::splitOldTriIntoNew(int triNum, IntDVec &triToVert, IntDVec &splitTriVec, IntDVec &insTriMap)
 {
-    startTiming(ProfDefault);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     kerSplitTri<<<BlocksPerGrid, 32>>>(toKernelArray(splitTriVec),
                                        toKernelPtr(triVec),
                                        toKernelPtr(oppVec),
@@ -470,28 +494,35 @@ void GpuDel::splitOldTriIntoNew(int triNum, IntDVec &triToVert, IntDVec &splitTr
                                        toKernelPtr(triToVert),
                                        triNum);
     CudaCheckError();
-    stopTiming(ProfDefault, outputPtr->stats.splitTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.splitTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 void GpuDel::flipLoop(CheckDelaunayMode checkMode)
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     flipVec   = memPool.allocateAny<FlipItem>(triMaxNum);
     triMsgVec = memPool.allocateAny<int2>(triMaxNum);
     actTriVec = memPool.allocateAny<int>(triMaxNum);
-
     triMsgVec.assign(triMaxNum, make_int2(-1, -1));
 
     int flipLoop = 0;
     actTriMode   = ActTriMarkCompact;
-    diagLogPtr   = &diagLogCompact;
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    diagLogPtr = &diagLogCompact;
+#endif
     while (flip(checkMode))
     {
         ++flipLoop;
     }
-
-    stopTiming(ProfDefault, outputPtr->stats.flipTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.flipTime += profTimer[PROFILE_DEFAULT].value();
+#endif
     relocateAll();
     memPool.release(triMsgVec);
     memPool.release(flipVec);
@@ -500,27 +531,28 @@ void GpuDel::flipLoop(CheckDelaunayMode checkMode)
 
 bool GpuDel::flip(CheckDelaunayMode checkMode)
 {
-    startTiming(ProfDetail);
-
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].start();
     ++diagLogPtr->_flipLoop;
-    const auto triNum = static_cast<int>(triVec.size());
-
+#endif
     compactActiveTriangles();
-
-    auto orgActNum = static_cast<int>(actTriVec.size());
-    if (inputPtr->isProfiling(ProfDiag))
+    const auto triNum    = static_cast<int>(triVec.size());
+    auto       orgActNum = static_cast<int>(actTriVec.size());
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    numActiveVec.push_back(orgActNum);
+    if (orgActNum == 0 || (checkMode != CircleExactOrientSoS && orgActNum < PredBlocksPerGrid * PredThreadsPerBlock))
     {
-        numActiveVec.push_back(orgActNum);
-        if (orgActNum == 0 ||
-            (checkMode != CircleExactOrientSoS && orgActNum < PredBlocksPerGrid * PredThreadsPerBlock))
-        {
-            numFlipVec.push_back(0);
-            timeCheckVec.push_back(0.0);
-            timeFlipVec.push_back(0.0);
-            numCircleVec.push_back(0);
-        }
+        numFlipVec.push_back(0);
+        timeCheckVec.push_back(0.0);
+        timeFlipVec.push_back(0.0);
+        numCircleVec.push_back(0);
     }
-    restartTiming(ProfDetail, diagLogPtr->_t[0]);
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[0] += profTimer[PROFILE_DETAIL].value();
+    profTimer[PROFILE_DETAIL].start();
+#endif
 
     // No more work
     if (0 == orgActNum)
@@ -536,35 +568,35 @@ bool GpuDel::flip(CheckDelaunayMode checkMode)
 
     IntDVec   flipToTri = memPool.allocateAny<int>(triMaxNum);
     const int flipNum   = getFlipNum(checkMode, triNum, orgActNum, flipToTri);
-
-    restartTiming(ProfDetail, diagLogPtr->_t[3]);
-
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[3] += profTimer[PROFILE_DETAIL].value();
+    profTimer[PROFILE_DETAIL].start();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
     // Preparation for the actual flipping. Include several steps
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        const int circleNum = thrust_sum(circleCountVec);
-        diagLogPtr->_circleCount += circleNum;
-        const int rejFlipNum = thrust_sum(rejFlipVec);
-        diagLogPtr->_rejFlipCount += rejFlipNum;
-        diagLogPtr->_totFlipNum += flipNum;
-        std::cout << "Acts: " << orgActNum << " Flips: " << flipNum << " ( " << rejFlipNum << " )"
-                  << " circle: " << circleNum
-                  << " Exact: " << (checkMode == CircleExactOrientSoS ? counters[CounterExact] : -1) << std::endl;
-        numCircleVec.push_back(circleNum);
-        startTiming(ProfDetail);
-    }
-
+    const int circleNum = thrust_sum(circleCountVec);
+    diagLogPtr->_circleCount += circleNum;
+    const int rejFlipNum = thrust_sum(rejFlipVec);
+    diagLogPtr->_rejFlipCount += rejFlipNum;
+    diagLogPtr->_totFlipNum += flipNum;
+    std::cout << "Acts: " << orgActNum << " Flips: " << flipNum << " ( " << rejFlipNum << " )"
+              << " circle: " << circleNum
+              << " Exact: " << (checkMode == CircleExactOrientSoS ? counters[CounterExact] : -1) << std::endl;
+    numCircleVec.push_back(circleNum);
+    profTimer[PROFILE_DETAIL].start();
+#endif
     if (0 == flipNum)
     {
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
         numCircleVec.push_back(0);
         timeFlipVec.push_back(0);
+#endif
         memPool.release(flipToTri);
         return false;
     }
-
     originalFlipNum.push_back(getOriginalFlipNumAndExpandFlipVec(flipNum));
     doFlippingAndUpdateOppTri(orgActNum, flipNum, flipToTri);
-
     memPool.release(flipToTri);
     return true;
 }
@@ -589,12 +621,16 @@ void GpuDel::selectMode(const int triNum, int orgActNum)
     if (orgActNum < BlocksPerGrid * ThreadsPerBlock && orgActNum * 2 < actTriVec.capacity() && orgActNum * 2 < triNum)
     {
         actTriMode = ActTriCollectCompact;
+#if PROFILE_LEVEL >= PROFILE_DETAIL
         diagLogPtr = &diagLogCollect;
+#endif
     }
     else
     {
         actTriMode = ActTriMarkCompact;
+#if PROFILE_LEVEL >= PROFILE_DETAIL
         diagLogPtr = &diagLogCompact;
+#endif
     }
 }
 
@@ -602,8 +638,14 @@ int GpuDel::getFlipNum(CheckDelaunayMode checkMode, int triNum, int orgActNum, I
 {
     IntDVec triVoteVec = memPool.allocateAny<int>(triMaxNum);
     getTriVotes(checkMode, triNum, orgActNum, triVoteVec);
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
     double prevTime = diagLogPtr->_t[1];
-    restartTiming(ProfDetail, diagLogPtr->_t[1]);
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[1] += profTimer[PROFILE_DETAIL].value();
+    profTimer[PROFILE_DETAIL].start();
+#endif
     flipToTri.resize(orgActNum);
     kerMarkRejectedFlips<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(actTriVec),
                                                              toKernelPtr(oppVec),
@@ -611,29 +653,34 @@ int GpuDel::getFlipNum(CheckDelaunayMode checkMode, int triNum, int orgActNum, I
                                                              toKernelPtr(triInfoVec),
                                                              toKernelPtr(flipToTri),
                                                              orgActNum,
-                                                             inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec)
-                                                                                             : nullptr);
+#if PROFILE_LEVEL>=PROFILE_DIAGNOSE
+                                                             toKernelPtr(rejFlipVec)
+#else
+                                                             nullptr
+#endif
+                                                             );
     CudaCheckError();
     memPool.release(triVoteVec);
-
-    restartTiming(ProfDetail, diagLogPtr->_t[2]);
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[2] += profTimer[PROFILE_DETAIL].value();
+    profTimer[PROFILE_DETAIL].start();
+#endif
     IntDVec   temp    = memPool.allocateAny<int>(triMaxNum, true);
     const int flipNum = compactIfNegative(flipToTri, temp);
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        numFlipVec.push_back(flipNum);
-        timeCheckVec.push_back(diagLogPtr->_t[1] - prevTime);
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    numFlipVec.push_back(flipNum);
+    timeCheckVec.push_back(diagLogPtr->_t[1] - prevTime);
+#endif
     return flipNum;
 }
 
 void GpuDel::getTriVotes(CheckDelaunayMode checkMode, int triNum, int orgActNum, IntDVec &triVoteVec)
 {
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        circleCountVec.assign(triNum, 0);
-        rejFlipVec.assign(triNum, 0);
-    }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    circleCountVec.assign(triNum, 0);
+    rejFlipVec.assign(triNum, 0);
+#endif
     triVoteVec.assign(triNum, INT_MAX);
     dispatchCheckDelaunay(checkMode, orgActNum, triVoteVec);
 }
@@ -643,37 +690,49 @@ void GpuDel::dispatchCheckDelaunay(CheckDelaunayMode checkMode, int orgActNum, I
     switch (checkMode)
     {
     case CircleFastOrientFast:
-        kerCheckDelaunayFast<<<BlocksPerGrid, ThreadsPerBlock>>>(
-            toKernelPtr(actTriVec),
-            toKernelPtr(triVec),
-            toKernelPtr(oppVec),
-            toKernelPtr(triInfoVec),
-            toKernelPtr(triVoteVec),
-            orgActNum,
-            inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
+        kerCheckDelaunayFast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(actTriVec),
+                                                                 toKernelPtr(triVec),
+                                                                 toKernelPtr(oppVec),
+                                                                 toKernelPtr(triInfoVec),
+                                                                 toKernelPtr(triVoteVec),
+                                                                 orgActNum,
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+                                                                 toKernelPtr(circleCountVec)
+#else
+                                                                  nullptr
+#endif
+        );
         CudaCheckError();
         break;
     case CircleExactOrientSoS:
         // Reuse this array to save memory
         Int2DVec &exactCheckVi = triMsgVec;
         counters.renew();
-        kerCheckDelaunayExact_Fast<<<BlocksPerGrid, ThreadsPerBlock>>>(
-            toKernelPtr(actTriVec),
-            toKernelPtr(triVec),
-            toKernelPtr(oppVec),
-            toKernelPtr(triInfoVec),
-            toKernelPtr(triVoteVec),
-            toKernelPtr(exactCheckVi),
-            orgActNum,
-            counters.ptr(),
-            inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
-        kerCheckDelaunayExact_Exact<<<PredBlocksPerGrid, PredThreadsPerBlock>>>(
-            toKernelPtr(triVec),
-            toKernelPtr(oppVec),
-            toKernelPtr(triVoteVec),
-            toKernelPtr(exactCheckVi),
-            counters.ptr(),
-            inputPtr->isProfiling(ProfDiag) ? toKernelPtr(circleCountVec) : nullptr);
+        kerCheckDelaunayExact_Fast<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelPtr(actTriVec),
+                                                                       toKernelPtr(triVec),
+                                                                       toKernelPtr(oppVec),
+                                                                       toKernelPtr(triInfoVec),
+                                                                       toKernelPtr(triVoteVec),
+                                                                       toKernelPtr(exactCheckVi),
+                                                                       orgActNum,
+                                                                       counters.ptr(),
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+                                                                       toKernelPtr(circleCountVec)
+#else
+                                                                        nullptr
+#endif
+        );
+        kerCheckDelaunayExact_Exact<<<PredBlocksPerGrid, PredThreadsPerBlock>>>(toKernelPtr(triVec),
+                                                                                toKernelPtr(oppVec),
+                                                                                toKernelPtr(triVoteVec),
+                                                                                toKernelPtr(exactCheckVi),
+                                                                                counters.ptr(),
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+                                                                                toKernelPtr(circleCountVec)
+#else
+                                                                                 nullptr
+#endif
+        );
         CudaCheckError();
         break;
     }
@@ -683,19 +742,26 @@ int GpuDel::getOriginalFlipNumAndExpandFlipVec(const int flipNum)
 {
     auto orgFlipNum = static_cast<int>(flipVec.size());
     int  expFlipNum = orgFlipNum + flipNum;
-
     if (expFlipNum > flipVec.capacity())
     {
-        stopTiming(ProfDetail, diagLogPtr->_t[4]);
-        stopTiming(ProfDefault, outputPtr->stats.flipTime);
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+        profTimer[PROFILE_DETAIL].stop();
+        diagLogPtr->_t[4] += profTimer[PROFILE_DETAIL].value();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+        profTimer[PROFILE_DEFAULT].stop();
+        stats.flipTime += profTimer[PROFILE_DEFAULT].value();
+#endif
         relocateAll();
-        startTiming(ProfDefault);
-        startTiming(ProfDetail);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+        profTimer[PROFILE_DEFAULT].start();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+        profTimer[PROFILE_DETAIL].start();
+#endif
         orgFlipNum = 0;
         expFlipNum = flipNum;
     }
-
     flipVec.grow(expFlipNum);
     return orgFlipNum;
 }
@@ -716,8 +782,11 @@ void GpuDel::doFlippingAndUpdateOppTri(int orgActNum, int flipNum, IntDVec &flip
     {
         actTriVec.grow(orgActNum + flipNum);
     }
-    restartTiming(ProfDetail, diagLogPtr->_t[4]);
-
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[4] += profTimer[PROFILE_DETAIL].value();
+    profTimer[PROFILE_DETAIL].start();
+#endif
     // Flipping, 32 ThreadsPerBlock is optimal
     kerFlip<<<BlocksPerGrid, 32>>>(toKernelArray(flipToTri),
                                    toKernelPtr(triVec),
@@ -740,12 +809,16 @@ void GpuDel::doFlippingAndUpdateOppTri(int orgActNum, int flipNum, IntDVec &flip
                                         originalFlipNum.back(),
                                         flipNum);
     CudaCheckError();
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
     double prevTime = diagLogPtr->_t[5];
-    stopTiming(ProfDetail, diagLogPtr->_t[5]);
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        timeFlipVec.push_back(diagLogPtr->_t[5] - prevTime);
-    }
+#endif
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[5] += profTimer[PROFILE_DETAIL].value();
+#endif
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    timeFlipVec.push_back(diagLogPtr->_t[5] - prevTime);
+#endif
 }
 
 void GpuDel::relocateAll()
@@ -754,9 +827,9 @@ void GpuDel::relocateAll()
     {
         return;
     }
-
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     if (availPtNum > 0)
     {
         IntDVec triToFlip = memPool.allocateAny<int>(triMaxNum);
@@ -769,10 +842,12 @@ void GpuDel::relocateAll()
     // Just clean up the flips
     flipVec.resize(0);
     originalFlipNum.clear();
-
     // Reset the triMsgVec
     triMsgVec.assign(triMaxNum, make_int2(-1, -1));
-    stopTiming(ProfDefault, outputPtr->stats.relocateTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.relocateTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 void GpuDel::rebuildTriPtrAfterFlipping(IntDVec &triToFlip)
@@ -782,10 +857,8 @@ void GpuDel::rebuildTriPtrAfterFlipping(IntDVec &triToFlip)
     {
         int prevFlipNum = originalFlipNum[i];
         int flipNum     = nextFlipNum - prevFlipNum;
-
         kerUpdateFlipTrace<<<BlocksPerGrid, ThreadsPerBlock>>>(
             toKernelPtr(flipVec), toKernelPtr(triToFlip), prevFlipNum, flipNum);
-
         nextFlipNum = prevFlipNum;
     }
     CudaCheckError();
@@ -812,16 +885,22 @@ void GpuDel::relocatePoints(IntDVec &triToFlip)
 
 void GpuDel::markSpecialTris()
 {
-    startTiming(ProfDetail);
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].start();
+#endif
     kerMarkSpecialTris<<<BlocksPerGrid, ThreadsPerBlock>>>(toKernelArray(triInfoVec), toKernelPtr(oppVec));
     CudaCheckError();
-    stopTiming(ProfDetail, diagLogPtr->_t[0]);
+#if PROFILE_LEVEL >= PROFILE_DETAIL
+    profTimer[PROFILE_DETAIL].stop();
+    diagLogPtr->_t[0] += profTimer[PROFILE_DETAIL].value();
+#endif
 }
 
 void GpuDel::insertConstraints()
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     initForConstraintInsertion();
     triConsVec = memPool.allocateAny<int>(triVec.size());
     flipVec    = memPool.allocateAny<FlipItem>(triMaxNum);
@@ -838,10 +917,9 @@ void GpuDel::insertConstraints()
 
     while (markIntersections())
     {
-        if (inputPtr->isProfiling(ProfDiag))
-        {
-            std::cout << "Iter " << (outerLoop + 1) << std::endl;
-        }
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+        std::cout << "Iter " << (outerLoop + 1) << std::endl;
+#endif
         // Collect active triangles
         thrust_copyIf_IsNotNegative(triConsVec, actTriVec);
         int innerLoop = 0;
@@ -859,18 +937,18 @@ void GpuDel::insertConstraints()
         // Mark all the possibly modified triangles as Alive + Changed (3).
         thrust_scatterConstantMap(actTriVec, triInfoVec, 3);
     }
-
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        std::cout << "ConsFlip: Outer loop = " << outerLoop << ", inner loop = " << flipLoop
-                  << ", total flip = " << totFlipNum << std::endl;
-    }
-
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    std::cout << "ConsFlip: Outer loop = " << outerLoop << ", inner loop = " << flipLoop
+              << ", total flip = " << totFlipNum << std::endl;
+#endif
     memPool.release(triConsVec);
     memPool.release(triMsgVec);
     memPool.release(actTriVec);
     memPool.release(flipVec);
-    stopTiming(ProfDefault, outputPtr->stats.constraintTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.constraintTime += profTimer[PROFILE_DEFAULT].value();
+#endif
 }
 
 void GpuDel::initForConstraintInsertion()
@@ -922,12 +1000,10 @@ bool GpuDel::flipConstraints(int &flipNum)
 {
     const auto triNum = triVec.size();
     const auto actNum = actTriVec.size();
-
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
     // Vote for flips
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        rejFlipVec.assign(triNum, 0);
-    }
+    rejFlipVec.assign(triNum, 0);
+#endif
     updatePairStatus();
 
     IntDVec triVoteVec = memPool.allocateAny<int>(triMaxNum);
@@ -937,7 +1013,6 @@ bool GpuDel::flipConstraints(int &flipNum)
     flipToTri.resize(actNum);
     updateFlipConsNum(flipNum, triVoteVec, flipToTri);
     memPool.release(triVoteVec);
-
     if (0 == flipNum)
     {
         memPool.release(flipToTri);
@@ -946,7 +1021,6 @@ bool GpuDel::flipConstraints(int &flipNum)
 
     auto orgFlipNum = static_cast<int>(flipVec.size());
     int  expFlipNum = orgFlipNum + flipNum;
-
     if (expFlipNum > flipVec.capacity())
     {
         flipVec.resize(0);
@@ -954,7 +1028,6 @@ bool GpuDel::flipConstraints(int &flipNum)
         orgFlipNum = 0;
         expFlipNum = flipNum;
     }
-
     doFlippingAndUpdateOppTri(flipNum, orgFlipNum, expFlipNum, flipToTri);
     memPool.release(flipToTri);
     return true;
@@ -964,12 +1037,10 @@ void GpuDel::doFlippingAndUpdateOppTri(int flipNum, int orgFlipNum, int expFlipN
 {
     triMsgVec.resize(triVec.size());
     flipVec.grow(expFlipNum);
-    if (inputPtr->isProfiling(ProfDiag))
-    {
-        const int rejFlipNum = thrust_sum(rejFlipVec);
-        std::cout << "  ConsFlips: " << flipNum << " ( " << rejFlipNum << " )" << std::endl;
-    }
-
+#if PROFILE_LEVEL >= PROFILE_DIAGNOSE
+    const int rejFlipNum = thrust_sum(rejFlipVec);
+    std::cout << "  ConsFlips: " << flipNum << " ( " << rejFlipNum << " )" << std::endl;
+#endif
     kerFlip<<<BlocksPerGrid, 32>>>(toKernelArray(flipToTri),
                                    toKernelPtr(triVec),
                                    toKernelPtr(oppVec),
@@ -1047,17 +1118,22 @@ void GpuDel::updateFlipConsNum(int &flipNum, IntDVec &triVoteVec, IntDVec &flipT
         toKernelPtr(triInfoVec),
         toKernelPtr(oppVec),
         toKernelPtr(flipToTri),
-        inputPtr->isProfiling(ProfDiag) ? toKernelPtr(rejFlipVec) : nullptr);
+#if PROFILE_LEVEL>=PROFILE_DIAGNOSE
+        toKernelPtr(rejFlipVec)
+#else
+        nullptr
+#endif
+        );
     CudaCheckError();
-
     IntDVec temp = memPool.allocateAny<int>(triMaxNum, true);
     flipNum      = compactIfNegative(flipToTri, temp);
 }
 
 void GpuDel::outputToHost()
 {
-    startTiming(ProfDefault);
-
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].start();
+#endif
     kerMarkInfinityTri<<<BlocksPerGrid, ThreadsPerBlock>>>(
         toKernelArray(triVec), toKernelPtr(triInfoVec), toKernelPtr(oppVec), infIdx);
     CudaCheckError();
@@ -1070,13 +1146,14 @@ void GpuDel::outputToHost()
             toKernelArray(triVec), toKernelPtr(triInfoVec), toKernelPtr(originalPointIdx));
         CudaCheckError();
     }
-
     // Copy to host
     triVec.copyToHost(outputPtr->triVec);
     oppVec.copyToHost(outputPtr->triOppVec);
-
-    stopTiming(ProfDefault, outputPtr->stats.outTime);
+#if PROFILE_LEVEL >= PROFILE_DEFAULT
+    profTimer[PROFILE_DEFAULT].stop();
+    stats.outTime += profTimer[PROFILE_DEFAULT].value();
     std::cout << "# Triangles:     " << triVec.size() << std::endl;
+#endif
 }
 
 void GpuDel::compactTris()
@@ -1130,49 +1207,13 @@ void GpuDel::cleanup()
     originalFlipNum.clear();
 
     dPredWrapper.cleanup();
-
+#if PROFILE_LEVEL>=PROFILE_DIAGNOSE
     circleCountVec.free();
     rejFlipVec.free();
-
-    outputPtr->stats.reset();
-    diagLogCompact.reset();
-    diagLogCollect.reset();
-
-    numActiveVec.clear();
-    numFlipVec.clear();
-    numCircleVec.clear();
-    timeCheckVec.clear();
-    timeFlipVec.clear();
+#endif
 }
 
-void GpuDel::startTiming(ProfLevel level)
-{
-    if (inputPtr->isProfiling(level))
-    {
-        profTimer[level].start();
-    }
+const Statistics& GpuDel::getStatistics() const{
+    return stats;
 }
-
-void GpuDel::pauseTiming(ProfLevel level)
-{
-    if (inputPtr->isProfiling(level))
-    {
-        profTimer[level].pause();
-    }
-}
-
-void GpuDel::stopTiming(ProfLevel level, double &accuTime)
-{
-    if (inputPtr->isProfiling(level))
-    {
-        profTimer[level].stop();
-        accuTime += profTimer[level].value();
-    }
-}
-
-void GpuDel::restartTiming(ProfLevel level, double &accuTime)
-{
-    stopTiming(level, accuTime);
-    startTiming(level);
-}
-}
+} // namespace gdg

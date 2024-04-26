@@ -43,7 +43,6 @@ void Output::reset()
     triVec.clear();
     triOppVec.clear();
     edgeSet.clear();
-    stats.reset();
     infPt = {0, 0, 0};
 }
 
